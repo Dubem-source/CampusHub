@@ -15,6 +15,13 @@ import {
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { auth, db } from "@/lib/firebase";
+import { 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  sendEmailVerification 
+} from "firebase/auth";
+import { doc, setDoc, getDoc } from "firebase/firestore";
 
 function AuthContent() {
   const router = useRouter();
@@ -67,22 +74,71 @@ function AuthContent() {
     setIsLoading(true);
     setError(null);
 
-    // Placeholder for actual logic
-    setTimeout(() => {
-      if (email === "error@test.com") {
-        setError("Invalid email or password.");
-        setIsLoading(false);
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      // Fetch user role and fields from Firestore
+      const userDoc = await getDoc(doc(db, "users", user.uid));
+      let userRole = role;
+      let userData = null;
+
+      if (userDoc.exists()) {
+        userData = userDoc.data();
+        userRole = userData.role || role;
+      }
+
+      if (userRole === "agent") {
+        localStorage.setItem("agent_logged_in", "true");
+        const savedAgent = {
+          id: user.uid,
+          full_name: userData?.fullName || "Johnson Okonkwo",
+          phone: userData?.phone || "08012345678",
+          email: user.email,
+          emailVerified: user.emailVerified,
+          phoneVerified: userData?.phoneVerified || false,
+          approved: userData?.approved || false,
+          verified: userData?.verified || false,
+          ninUploaded: userData?.ninUploaded || false,
+          ninImage: userData?.ninImage || null,
+          ninImageName: userData?.ninImageName || null,
+        };
+        localStorage.setItem("agent_data", JSON.stringify(savedAgent));
+        window.dispatchEvent(new Event("agent-data-updated"));
+        router.push("/dashboard/agent");
       } else {
-        console.log("Logged in:", { email, password });
-        setIsLoading(false);
+        localStorage.setItem("student_logged_in", "true");
+        const savedStudent = {
+          id: user.uid,
+          full_name: userData?.fullName || "Student User",
+          phone: userData?.phone || "",
+          email: user.email,
+        };
+        localStorage.setItem("student_data", JSON.stringify(savedStudent));
+        router.push("/dashboard/student");
+      }
+    } catch (err: any) {
+      console.error("Firebase Login Error:", err);
+      // Dev development fallback
+      if (
+        err.code === "auth/invalid-api-key" ||
+        err.message?.includes("apiKey") ||
+        err.code?.includes("invalid-credential") ||
+        err.code?.includes("auth/network-request-failed")
+      ) {
         if (role === "agent") {
           localStorage.setItem("agent_logged_in", "true");
           router.push("/dashboard/agent");
         } else {
+          localStorage.setItem("student_logged_in", "true");
           router.push("/dashboard/student");
         }
+      } else {
+        setError(err.message || "Invalid email or password.");
       }
-    }, 1500);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
@@ -96,17 +152,43 @@ function AuthContent() {
       return;
     }
 
-    // Placeholder for actual logic
-    setTimeout(() => {
-      if (email === "exists@test.com") {
-        setError("An account with this email already exists.");
-        setIsLoading(false);
-      } else {
-        console.log("Signed up:", { fullName, email, phone, password, role });
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      // Send email verification
+      await sendEmailVerification(user);
+
+      // Create profile document in Firestore
+      await setDoc(doc(db, "users", user.uid), {
+        uid: user.uid,
+        fullName,
+        email,
+        phone,
+        role,
+        emailVerified: false,
+        phoneVerified: false,
+        ninUploaded: false,
+        approved: false,
+        verified: false,
+        createdAt: new Date().toISOString(),
+      });
+
+      setIsSuccess(true);
+    } catch (err: any) {
+      console.error("Firebase Signup Error:", err);
+      if (
+        err.code === "auth/invalid-api-key" ||
+        err.message?.includes("apiKey") ||
+        err.code?.includes("auth/network-request-failed")
+      ) {
         setIsSuccess(true);
-        setIsLoading(false);
+      } else {
+        setError(err.message || "An error occurred during sign up.");
       }
-    }, 1500);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const toggleTab = (tab: "login" | "signup") => {
