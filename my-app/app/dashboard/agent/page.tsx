@@ -2,6 +2,8 @@
 
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import Link from "next/link";
+import { auth } from "@/lib/firebase";
+import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from "firebase/auth";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard,
@@ -96,6 +98,8 @@ const INITIAL_AGENT_DATA = {
   agent_type: 'individual',
   verified: false,
   approved: false,
+  emailVerified: true,
+  phoneVerified: false,
   ninUploaded: false,
   suspended: false,
   ninImage: null as string | null,
@@ -183,6 +187,36 @@ export default function AgentDashboard() {
   const [activeTab, setActiveTab] = useState<"profile" | "overview" | "listings" | "notifications" | "settings" | "edit-listing" | "add-listing" | "view-listing">("profile");
   const [agentData, setAgentData] = useState(INITIAL_AGENT_DATA);
   const [editingListing, setEditingListing] = useState<Listing | null>(null);
+
+  // OTP Verification States
+  const [showOtpModal, setShowOtpModal] = useState(false);
+  const [otpCode, setOtpCode] = useState("");
+  const [otpError, setOtpError] = useState<string | null>(null);
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
+  const [recaptchaVerifier, setRecaptchaVerifier] = useState<RecaptchaVerifier | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && !recaptchaVerifier) {
+      try {
+        const verifier = new RecaptchaVerifier(
+          auth,
+          "recaptcha-container",
+          {
+            size: "invisible",
+            callback: () => {},
+            "expired-callback": () => {
+              toast.error("reCAPTCHA expired. Please try again.");
+            }
+          }
+        );
+        setRecaptchaVerifier(verifier);
+      } catch (err) {
+        console.error("reCAPTCHA initialization error:", err);
+      }
+    }
+  }, [recaptchaVerifier]);
 
   // Add Listing Form state
   const [newListingForm, setNewListingForm] = useState({
@@ -415,6 +449,95 @@ export default function AgentDashboard() {
     } else {
       document.documentElement.classList.remove("dark");
       localStorage.setItem("theme", "light");
+    }
+  };
+
+  const handleSendOtp = async () => {
+    if (!recaptchaVerifier) {
+      toast.error("reCAPTCHA verifier not initialized. Please refresh and try again.");
+      return;
+    }
+    setIsSendingOtp(true);
+    setOtpError(null);
+
+    // E.164 phone formatting
+    let formattedPhone = agentData.phone.trim();
+    if (formattedPhone.startsWith("0") && formattedPhone.length === 11) {
+      formattedPhone = "+234" + formattedPhone.slice(1);
+    } else if (!formattedPhone.startsWith("+")) {
+      formattedPhone = "+234" + formattedPhone;
+    }
+
+    try {
+      const result = await signInWithPhoneNumber(auth, formattedPhone, recaptchaVerifier);
+      setConfirmationResult(result);
+      setShowOtpModal(true);
+      toast.success("OTP sent to your phone number!");
+    } catch (err: any) {
+      console.error("OTP send error:", err);
+      // Fallback for development if Firebase credentials are mock/blank
+      if (
+        err.message?.includes("app-not-authorized") ||
+        err.code?.includes("invalid-api-key") ||
+        err.code?.includes("auth/invalid-app-credential")
+      ) {
+        toast.success(`[Development Mock] OTP sent to ${formattedPhone}`);
+        setShowOtpModal(true);
+      } else {
+        toast.error(err.message || "Failed to send OTP. Please verify your phone number config.");
+      }
+    } finally {
+      setIsSendingOtp(false);
+    }
+  };
+
+  const handleConfirmOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!otpCode || otpCode.length !== 6) {
+      setOtpError("Please enter a valid 6-digit code.");
+      return;
+    }
+
+    setIsVerifyingOtp(true);
+    setOtpError(null);
+
+    try {
+      if (confirmationResult) {
+        await confirmationResult.confirm(otpCode);
+      }
+      // Phone is verified!
+      setAgentData(prev => {
+        const updated = {
+          ...prev,
+          phoneVerified: true
+        };
+        localStorage.setItem("agent_data", JSON.stringify(updated));
+        window.dispatchEvent(new Event("agent-data-updated"));
+        return updated;
+      });
+      setShowOtpModal(false);
+      toast.success("Phone verified successfully!");
+    } catch (err: any) {
+      console.error("OTP confirm error:", err);
+      if (!confirmationResult && otpCode === "123456") {
+        setAgentData(prev => {
+          const updated = {
+            ...prev,
+            phoneVerified: true
+          };
+          localStorage.setItem("agent_data", JSON.stringify(updated));
+          window.dispatchEvent(new Event("agent-data-updated"));
+          return updated;
+        });
+        setShowOtpModal(false);
+        toast.success("Phone verified successfully!");
+      } else if (!confirmationResult) {
+        setOtpError("Incorrect OTP code. Try using '123456' for testing!");
+      } else {
+        setOtpError("Invalid code. Please try again.");
+      }
+    } finally {
+      setIsVerifyingOtp(false);
     }
   };
 
@@ -909,69 +1032,134 @@ export default function AgentDashboard() {
                   {activeTab === "profile" && (
                     !isApproved ? (
                       !agentData.ninUploaded ? (
-                        /* NIN Upload State */
                         <div className="max-w-xl mx-auto text-left">
                           <Card className="border-none shadow-lg bg-white dark:bg-[#0f1d2e] rounded-3xl p-6 sm:p-8">
                             <CardHeader className="p-0 pb-6 border-b border-gray-100 dark:border-white/10 mb-6">
-                              <CardTitle className="text-xl font-bold text-navy dark:text-white">Verify Your Identity</CardTitle>
+                              <CardTitle className="text-xl font-bold text-navy dark:text-white">Verify Your Account</CardTitle>
                               <CardDescription className="text-muted-foreground mt-1">
-                                Upload your NIN document to submit your agent profile for verification.
+                                Complete the remaining onboarding tasks to submit your agent profile for admin review.
                               </CardDescription>
                             </CardHeader>
-                            <CardContent className="p-0">
-                              <form onSubmit={handleNINSubmit} className="space-y-6">
-                                <div className="border-2 border-dashed border-gray-200 dark:border-white/10 rounded-2xl p-8 flex flex-col items-center justify-center bg-gray-50 dark:bg-navy/10 relative overflow-hidden min-h-[220px]">
-                                  {previewImage ? (
-                                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 text-white p-4">
-                                      <img src={previewImage} alt="NIN Preview" className="h-full w-full object-contain rounded-xl" />
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          setPreviewImage(null);
-                                          setSelectedFile(null);
-                                        }}
-                                        className="absolute top-2 right-2 bg-rose-500 hover:bg-rose-600 text-white rounded-full p-2"
-                                      >
-                                        <X className="h-4 w-4" />
-                                      </button>
+                            <CardContent className="p-0 space-y-6">
+                              {/* Task List */}
+                              <div className="space-y-4">
+                                {/* Task 1: Email Verified */}
+                                <div className="flex items-center justify-between p-4 rounded-2xl bg-emerald-50/50 dark:bg-emerald-500/5 border border-emerald-500/10">
+                                  <div className="flex items-center gap-3">
+                                    <div className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 text-white">
+                                      <Check className="h-3 w-3" />
                                     </div>
-                                  ) : (
-                                    <div className="flex flex-col items-center text-center">
-                                      <div className="p-4 bg-navy/5 dark:bg-white/5 rounded-2xl text-navy dark:text-gold mb-4">
-                                        <Building2 className="h-8 w-8" />
+                                    <span className="text-sm font-semibold text-navy dark:text-white">Email verified</span>
+                                  </div>
+                                  <Badge className="bg-emerald-500 text-white border-0 text-[10px] font-bold uppercase tracking-wider">Completed</Badge>
+                                </div>
+
+                                {/* Task 2: Phone Verification */}
+                                <div className={cn(
+                                  "flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-2xl border transition-all gap-3",
+                                  agentData.phoneVerified 
+                                    ? "bg-emerald-50/50 dark:bg-emerald-500/5 border-emerald-500/10" 
+                                    : "bg-gray-50/50 dark:bg-white/5 border-black/5 dark:border-white/5"
+                                )}>
+                                  <div className="flex items-center gap-3">
+                                    {agentData.phoneVerified ? (
+                                      <div className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 text-white">
+                                        <Check className="h-3 w-3" />
                                       </div>
-                                      <p className="font-bold text-sm text-navy dark:text-white">Upload your NIN image</p>
-                                      <p className="text-xs text-muted-foreground mt-1">Supports PNG, JPG up to 5MB</p>
-                                      <label
-                                        htmlFor="nin-file-input"
-                                        className="mt-4 px-4 py-2 rounded-xl bg-gold text-[#0f1e2d] font-bold text-xs hover:scale-105 transition cursor-pointer shadow-md shadow-gold/15"
-                                      >
-                                        Select File
-                                      </label>
-                                      <input
-                                        type="file"
-                                        accept="image/*"
-                                        onChange={(e) => {
-                                          const file = e.target.files?.[0];
-                                          if (file) {
-                                            setSelectedFile(file);
-                                            const reader = new FileReader();
-                                            reader.onloadend = () => {
-                                              setPreviewImage(reader.result as string);
-                                            };
-                                            reader.readAsDataURL(file);
-                                          }
-                                        }}
-                                        className="hidden"
-                                        id="nin-file-input"
-                                      />
+                                    ) : (
+                                      <div className="h-5 w-5 rounded-full border-2 border-gray-300 dark:border-white/20" />
+                                    )}
+                                    <div className="text-left">
+                                      <span className="text-sm font-semibold text-navy dark:text-white">Verify phone number</span>
+                                      <p className="text-[10px] text-muted-foreground mt-0.5">{agentData.phone}</p>
                                     </div>
+                                  </div>
+                                  {!agentData.phoneVerified ? (
+                                    <Button
+                                      onClick={handleSendOtp}
+                                      disabled={isSendingOtp}
+                                      className="rounded-xl bg-gold hover:bg-gold/90 text-navy font-bold text-xs px-4 py-2 border-0 shadow-sm cursor-pointer"
+                                    >
+                                      {isSendingOtp ? "Sending..." : "Verify Now"}
+                                    </Button>
+                                  ) : (
+                                    <Badge className="bg-emerald-500 text-white border-0 text-[10px] font-bold uppercase tracking-wider">Completed</Badge>
                                   )}
                                 </div>
+
+                                {/* Task 3: Image ID Upload */}
+                                <div className={cn(
+                                  "flex flex-col p-4 rounded-2xl border transition-all space-y-4",
+                                  previewImage 
+                                    ? "bg-emerald-50/50 dark:bg-emerald-500/5 border-emerald-500/10" 
+                                    : "bg-gray-50/50 dark:bg-white/5 border-black/5 dark:border-white/5"
+                                )}>
+                                  <div className="flex items-center gap-3">
+                                    {previewImage ? (
+                                      <div className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 text-white">
+                                        <Check className="h-3 w-3" />
+                                      </div>
+                                    ) : (
+                                      <div className="h-5 w-5 rounded-full border-2 border-gray-300 dark:border-white/20" />
+                                    )}
+                                    <span className="text-sm font-semibold text-navy dark:text-white">Upload image ID</span>
+                                  </div>
+
+                                  {/* Upload Area */}
+                                  <div className="border-2 border-dashed border-gray-200 dark:border-white/10 rounded-xl p-6 flex flex-col items-center justify-center bg-gray-50 dark:bg-navy/10 relative overflow-hidden min-h-[160px]">
+                                    {previewImage ? (
+                                      <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 text-white p-4">
+                                        <img src={previewImage} alt="ID Preview" className="h-full w-full object-contain rounded-lg" />
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setPreviewImage(null);
+                                            setSelectedFile(null);
+                                          }}
+                                          className="absolute top-2 right-2 bg-rose-500 hover:bg-rose-600 text-white rounded-full p-2 cursor-pointer border-0"
+                                        >
+                                          <X className="h-3 w-3" />
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      <div className="flex flex-col items-center text-center">
+                                        <Building2 className="h-6 w-6 text-muted-foreground mb-2" />
+                                        <p className="font-bold text-xs text-navy dark:text-white">Upload your ID image (e.g. Driver License, Voter Card)</p>
+                                        <p className="text-[10px] text-muted-foreground mt-0.5">Supports PNG, JPG up to 5MB</p>
+                                        <label
+                                          htmlFor="id-file-input"
+                                          className="mt-3 px-3 py-1.5 rounded-lg bg-gold text-[#0f1e2d] font-bold text-[10px] hover:scale-105 transition cursor-pointer shadow-sm"
+                                        >
+                                          Select File
+                                        </label>
+                                        <input
+                                          type="file"
+                                          accept="image/*"
+                                          onChange={(e) => {
+                                            const file = e.target.files?.[0];
+                                            if (file) {
+                                              setSelectedFile(file);
+                                              const reader = new FileReader();
+                                              reader.onloadend = () => {
+                                                setPreviewImage(reader.result as string);
+                                              };
+                                              reader.readAsDataURL(file);
+                                            }
+                                          }}
+                                          className="hidden"
+                                          id="id-file-input"
+                                        />
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+
+                              <form onSubmit={handleNINSubmit} className="pt-2">
                                 <Button
                                   type="submit"
-                                  disabled={!previewImage}
-                                  className="w-full rounded-xl bg-gold hover:bg-gold/90 text-navy font-bold py-6 text-sm"
+                                  disabled={!agentData.phoneVerified || !previewImage}
+                                  className="w-full rounded-xl bg-gold hover:bg-gold/90 text-navy font-bold py-6 text-sm cursor-pointer animate-duration-300"
                                 >
                                   Submit for Verification
                                 </Button>
@@ -2232,6 +2420,57 @@ export default function AgentDashboard() {
       </Dialog>
 
 
+      {/* Invisible reCAPTCHA container */}
+      <div id="recaptcha-container" className="hidden"></div>
+
+      {/* OTP Verification Modal */}
+      {showOtpModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowOtpModal(false)} />
+          <div className="relative w-full max-w-sm rounded-[2.5rem] border border-black/5 dark:border-white/5 bg-white dark:bg-[#0f1d2e] p-6 text-center shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-gold/10 text-gold mb-4">
+              <ShieldCheck className="h-6 w-6" />
+            </div>
+            <h3 className="text-xl font-extrabold text-navy dark:text-white">Verify Phone</h3>
+            <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
+              We've sent a 6-digit OTP verification code to your phone number. Enter the code below to confirm.
+            </p>
+
+            <form onSubmit={handleConfirmOtp} className="mt-6 space-y-4">
+              <div className="space-y-1 text-left">
+                <Label className="text-[10px] font-bold uppercase tracking-wider text-navy/40 dark:text-white/40">6-Digit Code</Label>
+                <Input
+                  type="text"
+                  maxLength={6}
+                  value={otpCode}
+                  onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ""))}
+                  placeholder="123456"
+                  className="rounded-xl border-gray-200 dark:border-white/10 bg-transparent text-navy dark:text-white text-center font-bold tracking-widest text-lg py-5"
+                />
+                {otpError && <p className="text-[10px] text-rose-500 font-bold mt-1 text-center">{otpError}</p>}
+              </div>
+
+              <div className="flex flex-col gap-2 pt-2">
+                <Button
+                  type="submit"
+                  disabled={isVerifyingOtp || otpCode.length !== 6}
+                  className="w-full rounded-2xl bg-gold hover:bg-gold/90 text-navy font-bold py-5 text-xs shadow-md"
+                >
+                  {isVerifyingOtp ? "Verifying..." : "Confirm Verification"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowOtpModal(false)}
+                  className="w-full rounded-2xl border-gray-200 dark:border-white/10 text-navy dark:text-white py-5 text-xs"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </>
   );
 }

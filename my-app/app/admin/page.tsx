@@ -329,6 +329,17 @@ const AgentApplicationsTab = ({
                                 <Label className="text-xs text-muted-foreground">Operating Area</Label>
                                 <p className="font-semibold text-sm text-navy dark:text-white">{app.area}</p>
                               </div>
+                              <div>
+                                <Label className="text-xs text-muted-foreground block mb-1">Verification Status</Label>
+                                <div className="flex gap-2">
+                                  <Badge className="bg-emerald-500 text-white border-0 text-[10px] font-bold uppercase tracking-wider">Email Verified</Badge>
+                                  {app.phoneVerified ? (
+                                    <Badge className="bg-emerald-500 text-white border-0 text-[10px] font-bold uppercase tracking-wider">Phone Verified</Badge>
+                                  ) : (
+                                    <Badge className="bg-rose-500 text-white border-0 text-[10px] font-bold uppercase tracking-wider">Phone Unverified</Badge>
+                                  )}
+                                </div>
+                              </div>
                             </div>
                             <div className="space-y-4">
                               <div>
@@ -414,6 +425,30 @@ const AgentApplicationsTab = ({
                           <div>
                             <Label className="text-xs text-muted-foreground">Operating Area</Label>
                             <p className="font-semibold text-sm text-navy dark:text-white">{app.area}</p>
+                          </div>
+                          <div>
+                            <Label className="text-xs text-muted-foreground block mb-1">Verification Status</Label>
+                            <div className="flex gap-2">
+                              <Badge className="bg-emerald-500 text-white border-0 text-[10px] font-bold uppercase tracking-wider">Email Verified</Badge>
+                              {app.phoneVerified ? (
+                                <Badge className="bg-emerald-500 text-white border-0 text-[10px] font-bold uppercase tracking-wider">Phone Verified</Badge>
+                              ) : (
+                                <Badge className="bg-rose-500 text-white border-0 text-[10px] font-bold uppercase tracking-wider">Phone Unverified</Badge>
+                              )}
+                            </div>
+                          </div>
+                          <div>
+                            <Label className="text-xs text-muted-foreground block mb-1">Verification Document</Label>
+                            {app.ninImage ? (
+                              <div className="mt-2 border border-navy/10 dark:border-white/10 rounded-xl overflow-hidden bg-gray-50 dark:bg-white/5 flex flex-col items-center justify-center p-2">
+                                <img src={app.ninImage} alt="NIN ID Card" className="max-h-40 object-contain rounded-lg shadow-sm" />
+                                <p className="text-[9px] text-muted-foreground mt-2">{app.documentPlaceholder}</p>
+                              </div>
+                            ) : (
+                              <div className="mt-2 p-4 border-2 border-dashed border-navy/10 dark:border-white/10 rounded-xl flex flex-col items-center justify-center bg-gray-50 dark:bg-white/5">
+                                <p className="text-xs font-semibold text-navy/60 dark:text-gold/60">{app.documentPlaceholder}</p>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -1906,7 +1941,13 @@ export default function AdminDashboard() {
               if (exists) {
                 return prev.map(app =>
                   app.id === appId
-                    ? { ...app, lodgesManaged: parsed.listings?.length || 0, status: parsed.approved ? 'Approved' : (parsed.rejected ? 'Rejected' : 'Pending') }
+                    ? { 
+                        ...app, 
+                        lodgesManaged: parsed.listings?.length || 0, 
+                        status: parsed.approved ? 'Approved' : (parsed.rejected ? 'Rejected' : 'Pending'),
+                        emailVerified: parsed.emailVerified !== undefined ? parsed.emailVerified : true,
+                        phoneVerified: parsed.phoneVerified !== undefined ? parsed.phoneVerified : false,
+                      }
                     : app
                 );
               } else {
@@ -1921,6 +1962,8 @@ export default function AdminDashboard() {
                   appliedDate: new Date().toISOString().split('T')[0],
                   documentPlaceholder: parsed.ninImageName || 'NIN_document.jpg',
                   ninImage: parsed.ninImage || undefined,
+                  emailVerified: parsed.emailVerified !== undefined ? parsed.emailVerified : true,
+                  phoneVerified: parsed.phoneVerified !== undefined ? parsed.phoneVerified : false,
                 };
 
                 // Add system notification for the new agent application

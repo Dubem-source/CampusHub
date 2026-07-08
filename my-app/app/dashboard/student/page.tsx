@@ -41,6 +41,7 @@ import {
   Plus,
   Tag,
   X,
+  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -291,6 +292,7 @@ function StudentDashboardContent() {
 
   // Post Item Modal Form
   const [isPostModalOpen, setIsPostModalOpen] = useState(false);
+  const [isMarketVettingModalOpen, setIsMarketVettingModalOpen] = useState(false);
   const [postTitle, setPostTitle] = useState('');
   const [postPrice, setPostPrice] = useState('');
   const [postCategory, setPostCategory] = useState<'Electronics' | 'Furniture' | 'Kitchen' | 'Books' | 'Other'>('Electronics');
@@ -2023,7 +2025,7 @@ function StudentDashboardContent() {
                           <p className="text-xs text-muted-foreground mt-1">Buy and sell items directly with other FUTO students.</p>
                         </div>
                         <button
-                          onClick={() => setIsPostModalOpen(true)}
+                          onClick={() => setIsMarketVettingModalOpen(true)}
                           className="inline-flex items-center gap-2 rounded-full bg-gold hover:bg-gold/90 px-5 py-3 text-xs font-bold text-navy shadow-md transition hover:-translate-y-0.5 border-0 self-start sm:self-auto cursor-pointer"
                         >
                           <Plus className="h-4 w-4" />
@@ -2935,6 +2937,54 @@ function StudentDashboardContent() {
                   className="flex-1 rounded-full bg-red-600 hover:bg-red-700 py-3 font-bold text-xs text-white shadow-md transition cursor-pointer border-0"
                 >
                   Delete
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+
+        {isMarketVettingModalOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsMarketVettingModalOpen(false)}
+              className="fixed inset-0 bg-black/60 z-50 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="fixed inset-0 m-auto h-fit max-h-[90vh] w-full max-w-sm bg-white dark:bg-[#0f1d2e] rounded-[2.5rem] border border-black/5 dark:border-white/5 z-50 p-6 text-center shadow-2xl flex flex-col items-center space-y-4"
+            >
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-gold/10 text-gold shadow-sm">
+                <Sparkles className="h-6 w-6" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-xl font-extrabold text-navy dark:text-white">Coming Soon!</h3>
+                <p className="text-xs text-muted-foreground leading-relaxed mt-2">
+                  Peer-to-peer uploads are currently in vetting mode to prevent scams and protect student buyers.
+                </p>
+              </div>
+              <div className="p-3.5 rounded-2xl bg-gold/5 border border-gold/10 text-left text-[11px] text-gold font-medium leading-relaxed">
+                💡 <strong>Vetted Sellers Mode:</strong> Only manually approved merchants can list items for now. If you are a student seller, contact the admin to verify your account and list your items!
+              </div>
+              <div className="flex flex-col w-full gap-2 pt-2">
+                <a
+                  href="https://wa.me/2348000000000?text=Hello%20CampusHub%20Admin%2C%20I%20am%20a%20student%20seller%20and%20want%20to%20vet%20my%20marketplace%20items."
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-gold hover:bg-gold/90 py-3.5 font-bold text-xs text-navy shadow-md transition cursor-pointer border-0"
+                >
+                  Contact Admin on WhatsApp
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setIsMarketVettingModalOpen(false)}
+                  className="w-full rounded-2xl bg-gray-50 hover:bg-gray-100 dark:bg-white/5 dark:hover:bg-white/10 py-3 font-bold text-xs text-navy dark:text-white transition cursor-pointer border-0"
+                >
+                  Close
                 </button>
               </div>
             </motion.div>

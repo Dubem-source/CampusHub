@@ -9,6 +9,8 @@ export interface AgentApplication {
   appliedDate: string;
   documentPlaceholder: string;
   ninImage?: string;
+  phoneVerified?: boolean;
+  emailVerified?: boolean;
 }
 
 export interface Agent {
@@ -62,6 +64,8 @@ export const MOCK_AGENT_APPLICATIONS: AgentApplication[] = [
     status: 'Pending',
     appliedDate: '2026-06-05',
     documentPlaceholder: 'NIN_Document_Sylvester.pdf',
+    emailVerified: true,
+    phoneVerified: true,
   },
   {
     id: 'app-2',
@@ -73,6 +77,8 @@ export const MOCK_AGENT_APPLICATIONS: AgentApplication[] = [
     status: 'Pending',
     appliedDate: '2026-06-06',
     documentPlaceholder: 'Utility_Bill_Joy.jpg',
+    emailVerified: true,
+    phoneVerified: false,
   },
   {
     id: 'app-3',
@@ -84,6 +90,8 @@ export const MOCK_AGENT_APPLICATIONS: AgentApplication[] = [
     status: 'Approved',
     appliedDate: '2026-06-03',
     documentPlaceholder: 'License_Emeka.pdf',
+    emailVerified: true,
+    phoneVerified: true,
   },
   {
     id: 'app-4',
