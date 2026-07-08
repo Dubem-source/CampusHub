@@ -195,8 +195,8 @@ function AuthContent() {
       <div className="hidden lg:flex lg:w-1/2 bg-[#0f1e2d] items-center justify-center p-12">
         <div className="text-center max-w-md">
           <Link href="/" className="flex flex-col items-center mb-8 group hover:opacity-90 transition-opacity">
-            <div className="w-20 h-20 bg-white rounded-2xl flex items-center justify-center mb-6 shadow-xl text-[#0f1e2d] group-hover:scale-105 transition-transform duration-200">
-              <Building className="h-10 w-10" />
+            <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mb-6 shadow-xl p-1 overflow-hidden group-hover:scale-105 transition-transform duration-200">
+              <img src="/image/Campus-Hub.png" alt="CampusHub Logo" className="w-full h-full object-contain rounded-full" />
             </div>
             <h1 className="text-4xl font-bold text-white tracking-tight mb-2">
               Campus<span className="text-[#C9952A]">Hub</span>
@@ -208,15 +208,17 @@ function AuthContent() {
           
           <div className="relative h-48 w-full opacity-20 flex items-center justify-center">
              <div className="absolute inset-0 border-2 border-dashed border-white/30 rounded-[3rem]"></div>
-             <Building className="h-24 w-24 text-white" />
+             <img src="/image/Campus-Hub.png" alt="CampusHub Logo" className="h-24 w-24 object-contain rounded-full" />
           </div>
         </div>
       </div>
 
       {/* --- Mobile Top Banner --- */}
       <div className="lg:hidden bg-[#0f1e2d] p-6 text-center border-b border-white/10">
-        <Link href="/" className="inline-flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
-          <Building className="h-6 w-6 text-[#C9952A]" />
+        <Link href="/" className="inline-flex items-center justify-center gap-2.5 hover:opacity-90 transition-opacity">
+          <div className="w-7 h-7 bg-white rounded-full p-0.5 overflow-hidden flex items-center justify-center">
+            <img src="/image/Campus-Hub.png" alt="CampusHub Logo" className="w-full h-full object-contain rounded-full" />
+          </div>
           <h1 className="text-xl font-bold text-white tracking-tight">
             Campus<span className="text-[#C9952A]">Hub</span>
           </h1>
