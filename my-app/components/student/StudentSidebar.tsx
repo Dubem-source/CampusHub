@@ -37,6 +37,7 @@ interface StudentSidebarProps {
   studentName: string;
   studentAvatar?: string;
   notificationsCount?: number;
+  onLogout?: () => void;
 }
 
 export function StudentSidebar({
@@ -45,6 +46,7 @@ export function StudentSidebar({
   studentName,
   studentAvatar,
   notificationsCount = 0,
+  onLogout,
 }: StudentSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
@@ -257,13 +259,13 @@ export function StudentSidebar({
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton 
-              onClick={() => {
+              onClick={onLogout || (() => {
                 setOpenMobile(false);
                 localStorage.removeItem("student_logged_in");
                 localStorage.removeItem("user_role");
                 window.dispatchEvent(new Event("student-data-updated"));
                 window.location.href = "/";
-              }}
+              })}
               className="text-navy/70 dark:text-white/70 hover:text-navy hover:dark:text-white hover:bg-navy/5 hover:dark:bg-white/5 px-3 py-6 gap-3 rounded-lg"
             >
               <LogOut className="w-5 h-5" />

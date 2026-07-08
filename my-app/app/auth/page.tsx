@@ -119,23 +119,7 @@ function AuthContent() {
       }
     } catch (err: any) {
       console.error("Firebase Login Error:", err);
-      // Dev development fallback
-      if (
-        err.code === "auth/invalid-api-key" ||
-        err.message?.includes("apiKey") ||
-        err.code?.includes("invalid-credential") ||
-        err.code?.includes("auth/network-request-failed")
-      ) {
-        if (role === "agent") {
-          localStorage.setItem("agent_logged_in", "true");
-          router.push("/dashboard/agent");
-        } else {
-          localStorage.setItem("student_logged_in", "true");
-          router.push("/dashboard/student");
-        }
-      } else {
-        setError(err.message || "Invalid email or password.");
-      }
+      setError(err.message || "Invalid email or password.");
     } finally {
       setIsLoading(false);
     }
@@ -177,15 +161,7 @@ function AuthContent() {
       setIsSuccess(true);
     } catch (err: any) {
       console.error("Firebase Signup Error:", err);
-      if (
-        err.code === "auth/invalid-api-key" ||
-        err.message?.includes("apiKey") ||
-        err.code?.includes("auth/network-request-failed")
-      ) {
-        setIsSuccess(true);
-      } else {
-        setError(err.message || "An error occurred during sign up.");
-      }
+      setError(err.message || "An error occurred during sign up.");
     } finally {
       setIsLoading(false);
     }

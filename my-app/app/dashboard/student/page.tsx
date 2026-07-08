@@ -4,6 +4,7 @@ import React, { useState, useEffect, Suspense, useRef, useCallback } from "react
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useAuth } from "@/hooks/use-auth";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "react-hot-toast";
 import {
@@ -268,10 +269,31 @@ function SearchParamsSync({
 
 function StudentDashboardContent() {
   const router = useRouter();
+  const { user, profile, loading: authLoading, logout: handleFirebaseLogout } = useAuth();
   const { toggleSidebar } = useSidebar();
   const [activeSection, setActiveSection] = useState<Section>('profile');
   const [student, setStudent] = useState(MOCK_STUDENT);
   const [isEditing, setIsEditing] = useState(false);
+
+  // Sync profile document updates from Firestore in real-time
+  useEffect(() => {
+    if (profile) {
+      setStudent(prev => ({
+        ...prev,
+        id: profile.uid,
+        full_name: profile.fullName || prev.full_name,
+        email: profile.email || prev.email,
+        phone: profile.phone || prev.phone,
+      }));
+    }
+  }, [profile]);
+
+  // Protect the dashboard route based on user auth state
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push("/auth?mode=login");
+    }
+  }, [user, authLoading, router]);
   const [savedRoomIds, setSavedRoomIds] = useState(INITIAL_SAVED_ROOMS);
   const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
   const [recentRooms, setRecentRooms] = useState<{ room: RoomUnit; lodge: Lodge }[]>([]);
@@ -868,7 +890,7 @@ function StudentDashboardContent() {
     { id: 'notifications' as Section, label: 'Notifications', icon: Bell, badge: notifications.filter(n => !n.read).length },
   ];
 
-  if (!mounted) {
+  if (!mounted || authLoading) {
     return (
       <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-white dark:bg-[#08131e] transition-colors duration-300">
         <div className="relative flex flex-col items-center space-y-4">
@@ -914,6 +936,7 @@ function StudentDashboardContent() {
         studentName={student.full_name}
         studentAvatar={student.avatar_url}
         notificationsCount={notifications.filter(n => !n.read).length}
+        onLogout={handleFirebaseLogout}
       />
 
       {/* 2. Main content wrap */}

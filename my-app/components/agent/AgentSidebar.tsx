@@ -30,6 +30,7 @@ interface AgentSidebarProps {
   agentName: string;
   agentPhoto: string;
   isApproved: boolean;
+  onLogout?: () => void;
 }
 
 export function AgentSidebar({
@@ -38,6 +39,7 @@ export function AgentSidebar({
   agentName,
   agentPhoto,
   isApproved,
+  onLogout,
 }: AgentSidebarProps) {
   const { state } = useSidebar();
 
@@ -129,10 +131,10 @@ export function AgentSidebar({
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton 
-              onClick={() => {
+              onClick={onLogout || (() => {
                 localStorage.removeItem("agent_logged_in");
                 window.location.href = "/";
-              }}
+              })}
               className="text-navy/70 dark:text-white/70 hover:text-navy hover:dark:text-white hover:bg-navy/5 hover:dark:bg-white/5 px-3 py-6 gap-3 rounded-lg"
             >
               <LogOut className="w-5 h-5" />

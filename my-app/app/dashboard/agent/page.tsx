@@ -2,6 +2,8 @@
 
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/hooks/use-auth";
 import { auth } from "@/lib/firebase";
 import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from "firebase/auth";
 import { motion, AnimatePresence } from "framer-motion";
@@ -183,10 +185,37 @@ const AMENITY_OPTIONS = ["Solar power", "Borehole water", "WiFi", "Security", "P
 const AREAS = ["Ihiagwa", "Eziobodo", "FUTO", "Umuchima"];
 
 export default function AgentDashboard() {
+  const router = useRouter();
+  const { user, profile, loading: authLoading, logout: handleFirebaseLogout } = useAuth();
   const { toggleSidebar } = useSidebar();
   const [activeTab, setActiveTab] = useState<"profile" | "overview" | "listings" | "notifications" | "settings" | "edit-listing" | "add-listing" | "view-listing">("profile");
   const [agentData, setAgentData] = useState(INITIAL_AGENT_DATA);
   const [editingListing, setEditingListing] = useState<Listing | null>(null);
+
+  // Sync profile document updates from Firestore in real-time
+  useEffect(() => {
+    if (profile) {
+      setAgentData(prev => ({
+        ...prev,
+        id: profile.uid,
+        full_name: profile.fullName || prev.full_name,
+        phone: profile.phone || prev.phone,
+        email: profile.email || prev.email,
+        phoneVerified: profile.phoneVerified,
+        emailVerified: profile.emailVerified,
+        ninUploaded: profile.ninUploaded,
+        approved: profile.approved,
+        verified: profile.verified,
+      }));
+    }
+  }, [profile]);
+
+  // Protect the dashboard route based on user auth state
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push("/auth?mode=login");
+    }
+  }, [user, authLoading, router]);
 
   // OTP Verification States
   const [showOtpModal, setShowOtpModal] = useState(false);
@@ -475,17 +504,7 @@ export default function AgentDashboard() {
       toast.success("OTP sent to your phone number!");
     } catch (err: any) {
       console.error("OTP send error:", err);
-      // Fallback for development if Firebase credentials are mock/blank
-      if (
-        err.message?.includes("app-not-authorized") ||
-        err.code?.includes("invalid-api-key") ||
-        err.code?.includes("auth/invalid-app-credential")
-      ) {
-        toast.success(`[Development Mock] OTP sent to ${formattedPhone}`);
-        setShowOtpModal(true);
-      } else {
-        toast.error(err.message || "Failed to send OTP. Please verify your phone number config.");
-      }
+      toast.error(err.message || "Failed to send OTP. Please verify your phone number config.");
     } finally {
       setIsSendingOtp(false);
     }
@@ -502,10 +521,12 @@ export default function AgentDashboard() {
     setOtpError(null);
 
     try {
-      if (confirmationResult) {
-        await confirmationResult.confirm(otpCode);
+      if (!confirmationResult) {
+        throw new Error("No active verification session. Please resend OTP.");
       }
-      // Phone is verified!
+      await confirmationResult.confirm(otpCode);
+      
+      // Update phone verification flag in state and storage
       setAgentData(prev => {
         const updated = {
           ...prev,
@@ -519,23 +540,7 @@ export default function AgentDashboard() {
       toast.success("Phone verified successfully!");
     } catch (err: any) {
       console.error("OTP confirm error:", err);
-      if (!confirmationResult && otpCode === "123456") {
-        setAgentData(prev => {
-          const updated = {
-            ...prev,
-            phoneVerified: true
-          };
-          localStorage.setItem("agent_data", JSON.stringify(updated));
-          window.dispatchEvent(new Event("agent-data-updated"));
-          return updated;
-        });
-        setShowOtpModal(false);
-        toast.success("Phone verified successfully!");
-      } else if (!confirmationResult) {
-        setOtpError("Incorrect OTP code. Try using '123456' for testing!");
-      } else {
-        setOtpError("Invalid code. Please try again.");
-      }
+      setOtpError(err.message || "Invalid code. Please try again.");
     } finally {
       setIsVerifyingOtp(false);
     }
@@ -820,7 +825,7 @@ export default function AgentDashboard() {
 
   const isApproved = agentData.approved && agentData.verified;
 
-  if (!mounted) {
+  if (!mounted || authLoading) {
     return (
       <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-white dark:bg-[#08131e] transition-colors duration-300">
         <div className="relative flex flex-col items-center space-y-4">
@@ -858,6 +863,7 @@ export default function AgentDashboard() {
         agentName={agentData.full_name}
         agentPhoto={agentData.photo}
         isApproved={isApproved}
+        onLogout={handleFirebaseLogout}
       />
 
       {/* 2. Main content wrap */}
