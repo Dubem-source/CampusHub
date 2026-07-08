@@ -4,7 +4,8 @@ import React, { useState, useMemo, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
-import { auth } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
+import { doc, setDoc, updateDoc, collection, addDoc, getDocs } from "firebase/firestore";
 import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from "firebase/auth";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -526,7 +527,14 @@ export default function AgentDashboard() {
       }
       await confirmationResult.confirm(otpCode);
       
-      // Update phone verification flag in state and storage
+      // Update phone verification flag in Firestore
+      if (user) {
+        await updateDoc(doc(db, "users", user.uid), {
+          phoneVerified: true,
+          phone: agentData.phone
+        });
+      }
+
       setAgentData(prev => {
         const updated = {
           ...prev,
@@ -546,12 +554,28 @@ export default function AgentDashboard() {
     }
   };
 
-  const handleNINSubmit = (e: React.FormEvent) => {
+  const handleNINSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!previewImage) {
       toast.error("Please choose or upload a valid image file.");
       return;
     }
+    
+    // Save to Firestore users document
+    if (user) {
+      try {
+        await updateDoc(doc(db, "users", user.uid), {
+          ninUploaded: true,
+          ninImage: previewImage,
+          ninImageName: selectedFile?.name || "NIN_document.jpg"
+        });
+      } catch (err) {
+        console.error("Firestore upload error:", err);
+        toast.error("Failed to submit verification request. Please try again.");
+        return;
+      }
+    }
+
     setAgentData(prev => {
       const updated = {
         ...prev,
@@ -680,7 +704,7 @@ export default function AgentDashboard() {
     );
   };
 
-  const handleCreateListingSubmit = (e: React.FormEvent) => {
+  const handleCreateListingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!newListingForm.building_name.trim()) {
@@ -699,72 +723,106 @@ export default function AgentDashboard() {
       toast.error("Please enter a landmark description.");
       return;
     }
+    if (!user) {
+      toast.error("Please log in to add a room listing.");
+      return;
+    }
 
     setNewListingLoading(true);
 
-    setTimeout(() => {
-      try {
-        const DEFAULT_PHOTOS: Record<string, string> = {
-          "Self-contain": "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=600&q=80",
-          "Mini-flat": "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=600&q=80",
-          "Single room": "https://images.unsplash.com/photo-1540518614846-7eded433c457?auto=format&fit=crop&w=600&q=80",
-          "One-bedroom": "https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=600&q=80",
+    try {
+      const DEFAULT_PHOTOS: Record<string, string> = {
+        "Self-contain": "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=600&q=80",
+        "Mini-flat": "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=600&q=80",
+        "Single room": "https://images.unsplash.com/photo-1540518614846-7eded433c457?auto=format&fit=crop&w=600&q=80",
+        "One-bedroom": "https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=600&q=80",
+      };
+
+      const finalPhotos = newListingPhotos.length > 0
+        ? newListingPhotos
+        : [DEFAULT_PHOTOS[newListingForm.room_type] || DEFAULT_PHOTOS["Self-contain"]];
+
+      const slug = newListingForm.building_name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-");
+      const roomId = `room-${Date.now()}`;
+
+      // Create/update lodge details in database
+      await setDoc(doc(db, "lodges", slug), {
+        slug,
+        name: newListingForm.building_name,
+        area: newListingForm.area,
+        landmark: newListingForm.landmark,
+        rating: 4.5,
+        reviewsCount: 0,
+        isOfficial: false,
+        agentPhone: profile?.phone || "+2348000000000"
+      }, { merge: true });
+
+      // Create room document in database
+      const newListing: Listing = {
+        id: roomId,
+        room_type: newListingForm.room_type,
+        price: Number(newListingForm.price),
+        entryPrice: Number(newListingForm.entryPrice),
+        area: newListingForm.area,
+        landmark: newListingForm.landmark,
+        building_name: newListingForm.building_name,
+        amenities: newListingAmenities,
+        photos: finalPhotos,
+        availability: "available",
+        description: newListingForm.description,
+        created_at: new Date().toISOString().split("T")[0],
+        viewsCount: 0,
+      };
+
+      await setDoc(doc(db, "rooms", roomId), {
+        id: roomId,
+        lodgeSlug: slug,
+        agentId: user.uid,
+        roomType: newListingForm.room_type,
+        price: Number(newListingForm.price),
+        entryPrice: Number(newListingForm.entryPrice),
+        description: newListingForm.description,
+        photos: finalPhotos,
+        amenities: newListingAmenities,
+        availability: "available",
+        created_at: newListing.created_at,
+        viewsCount: 0,
+        area: newListingForm.area,
+        landmark: newListingForm.landmark,
+        building_name: newListingForm.building_name,
+      });
+
+      setAgentData(prev => {
+        const updated = {
+          ...prev,
+          listings: [newListing, ...(prev.listings || [])]
         };
+        localStorage.setItem("agent_data", JSON.stringify(updated));
+        window.dispatchEvent(new Event("agent-data-updated"));
+        return updated;
+      });
 
-        const finalPhotos = newListingPhotos.length > 0
-          ? newListingPhotos
-          : [DEFAULT_PHOTOS[newListingForm.room_type] || DEFAULT_PHOTOS["Self-contain"]];
+      toast.success("New listing added successfully!");
 
-        const newListing: Listing = {
-          id: `l-${Date.now()}`,
-          room_type: newListingForm.room_type,
-          price: Number(newListingForm.price),
-          entryPrice: Number(newListingForm.entryPrice),
-          area: newListingForm.area,
-          landmark: newListingForm.landmark,
-          building_name: newListingForm.building_name,
-          amenities: newListingAmenities,
-          photos: finalPhotos,
-          availability: "available",
-          description: newListingForm.description,
-          created_at: new Date().toISOString().split("T")[0],
-          viewsCount: 0,
-        };
+      setNewListingForm({
+        building_name: "",
+        room_type: "Self-contain",
+        price: "",
+        entryPrice: "",
+        area: "Eziobodo",
+        landmark: "",
+        description: "",
+      });
+      setNewListingAmenities([]);
+      setNewListingPhotos([]);
 
-        setAgentData(prev => {
-          const updated = {
-            ...prev,
-            listings: [newListing, ...(prev.listings || [])]
-          };
-          localStorage.setItem("agent_data", JSON.stringify(updated));
-          window.dispatchEvent(new Event("agent-data-updated"));
-          return updated;
-        });
-
-        toast.success("New listing added successfully!");
-
-        // Reset form
-        setNewListingForm({
-          building_name: "",
-          room_type: "Self-contain",
-          price: "",
-          entryPrice: "",
-          area: "Eziobodo",
-          landmark: "",
-          description: "",
-        });
-        setNewListingAmenities([]);
-        setNewListingPhotos([]);
-
-        // Go back
-        handleGoBackToListings();
-      } catch (err) {
-        console.error(err);
-        toast.error("An error occurred while creating the listing.");
-      } finally {
-        setNewListingLoading(false);
-      }
-    }, 800);
+      handleGoBackToListings();
+    } catch (err) {
+      console.error(err);
+      toast.error("An error occurred while creating the listing.");
+    } finally {
+      setNewListingLoading(false);
+    }
   };
 
   // --- UI Sub-components ---
