@@ -22,13 +22,13 @@ import {
 import Header from "../../../../../components/Header";
 import Footer from "../../../../../components/Footer";
 import LodgeCard from "../../../../../components/LodgeCard";
+import { db } from "../../../../../lib/firebase";
+import { doc, getDoc, getDocs, collection, query, where, limit } from "firebase/firestore";
 import {
   buildWhatsAppLink,
   formatNaira,
-  getAgentById,
-  getOtherRooms,
-  getRoomById,
-  getRoomBySlugAndRoomId,
+  Lodge,
+  RoomUnit,
   lodgeReviews,
   type Review,
 } from "../../../../../lib/lodge-data";
@@ -119,17 +119,72 @@ export default function RoomDetailPage() {
   const routeParams = useParams<{ slug?: string; roomId?: string }>();
   const slug = Array.isArray(routeParams?.slug) ? routeParams.slug[0] : routeParams?.slug;
   const roomId = Array.isArray(routeParams?.roomId) ? routeParams.roomId[0] : routeParams?.roomId;
-  const roomData = slug && roomId ? getRoomBySlugAndRoomId(slug, roomId) ?? getRoomById(roomId) : null;
 
-  const roomContext = useMemo(() => {
-    return roomData
-      ? {
-          room: roomData.room,
-          lodge: roomData.lodge,
-          agent: getAgentById(roomData.room.agentId),
+  const [roomContext, setRoomContext] = useState<{ room: RoomUnit; lodge: Lodge; agent: any } | null>(null);
+  const [otherRooms, setOtherRooms] = useState<{ room: RoomUnit; lodge: Lodge }[]>([]);
+  const [roomLoading, setRoomLoading] = useState(true);
+
+  useEffect(() => {
+    if (!slug || !roomId) return;
+    const fetchRoomDetail = async () => {
+      setRoomLoading(true);
+      try {
+        const roomDoc = await getDoc(doc(db, "rooms", roomId));
+        if (roomDoc.exists()) {
+          const room = roomDoc.data() as RoomUnit;
+          const lodgeDoc = await getDoc(doc(db, "lodges", slug));
+          const lodge = lodgeDoc.exists() ? (lodgeDoc.data() as Lodge) : null;
+          
+          const agentDoc = await getDoc(doc(db, "users", room.agentId));
+          const agent = agentDoc.exists() ? agentDoc.data() : {
+            name: room.agentId === "agent-official" ? "CampusHub Official" : "Agent Partner",
+            photo: "https://api.dicebear.com/7.x/avataaars/svg?seed=Agent",
+            phone: "+2348000000000",
+            verified: true,
+            responseTime: "Replies within 5 mins"
+          };
+
+          if (lodge) {
+            setRoomContext({ room, lodge, agent });
+            
+            // Fetch other rooms
+            try {
+              const otherRoomsSnap = await getDocs(
+                query(
+                  collection(db, "rooms"),
+                  where("agentId", "!=", room.agentId),
+                  where("availability", "==", "available"),
+                  limit(6)
+                )
+              );
+              const otherRoomsList: any[] = [];
+              for (const docSnap of otherRoomsSnap.docs) {
+                const r = docSnap.data() as RoomUnit;
+                if (r.id !== roomId) {
+                  const lDoc = await getDoc(doc(db, "lodges", r.lodgeSlug));
+                  if (lDoc.exists()) {
+                    otherRoomsList.push({
+                      room: r,
+                      lodge: lDoc.data() as Lodge,
+                    });
+                  }
+                }
+              }
+              setOtherRooms(otherRoomsList);
+            } catch (err) {
+              console.error("Error fetching other rooms:", err);
+            }
+          }
         }
-      : null;
-  }, [roomData]);
+      } catch (err) {
+        console.error("Error fetching room details:", err);
+      } finally {
+        setRoomLoading(false);
+      }
+    };
+
+    fetchRoomDetail();
+  }, [slug, roomId]);
 
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
@@ -215,12 +270,7 @@ export default function RoomDetailPage() {
     };
   }, [roomContext, localReviews]);
 
-  const relatedRooms = useMemo(() => {
-    if (!roomContext) {
-      return [];
-    }
-    return getOtherRooms(roomContext.room.agentId, roomContext.room.id);
-  }, [roomContext]);
+  const relatedRooms = otherRooms;
 
   const handleShare = async () => {
     if (!roomContext) {
@@ -274,7 +324,7 @@ export default function RoomDetailPage() {
     setReviewState({ water: 5, electricity: 5, security: 5, text: "", tenantConfirmed: false });
   };
 
-  if (!slug || !roomId) {
+  if (!slug || !roomId || roomLoading) {
     return (
       <div className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(201,149,42,0.08),transparent_28%),linear-gradient(180deg,#f8f9fa_0%,#ffffff_50%)] text-black">
         <Header />

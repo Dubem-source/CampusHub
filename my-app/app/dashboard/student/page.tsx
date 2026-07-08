@@ -215,8 +215,8 @@ function CustomSelect<T extends string | number>({
                   }}
                   className={cn(
                     "px-4 py-2.5 text-xs font-semibold cursor-pointer transition-colors flex items-center justify-between",
-                    isSelected 
-                      ? "text-gold bg-gold/5" 
+                    isSelected
+                      ? "text-gold bg-gold/5"
                       : "text-navy/80 dark:text-white/80 hover:bg-navy/5 hover:text-navy dark:hover:bg-white/5 dark:hover:text-white"
                   )}
                 >
@@ -2542,7 +2542,7 @@ function StudentDashboardContent() {
                               <a
                                 href={getProviderWhatsAppLink(provider.phone, provider.name)}
                                 target="_blank"
-                                  rel="noreferrer"
+                                rel="noreferrer"
                                 className="inline-flex items-center justify-center gap-2 rounded-full bg-gold hover:bg-gold/90 px-4 py-3 text-xs font-bold text-navy shadow-md hover:-translate-y-0.5 transition border-0"
                               >
                                 <MessageCircle size={14} />

@@ -4,6 +4,9 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "react-hot-toast";
+import { useAuth } from "@/hooks/use-auth";
+import { db } from "@/lib/firebase";
+import { collection, doc, getDocs, addDoc } from "firebase/firestore";
 import {
   Search,
   Calendar,
@@ -181,10 +184,10 @@ const getExpiryDays = (createdAt: Date) => {
 };
 
 export function RoommateNoticeboardContent() {
+  const { user, profile } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [posts, setPosts] = useState<RoommatePost[]>(initialPosts);
-  const [requests, setRequests] =
-    useState<ConnectionRequest[]>(initialRequests);
+  const [posts, setPosts] = useState<RoommatePost[]>([]);
+  const [requests, setRequests] = useState<ConnectionRequest[]>([]);
   const [sentRequestIds, setSentRequestIds] = useState<string[]>([]);
 
   // Modals & UI state
@@ -214,45 +217,90 @@ export function RoommateNoticeboardContent() {
     gender: "Female",
   });
 
+  // Sync profile details
   useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 2000);
-    
-    // Sync student details from localStorage
-    const stored = localStorage.getItem("student_data");
-    if (stored) {
-      try {
-        setCurrentStudent(JSON.parse(stored));
-      } catch (e) {
-        console.error("Failed to parse student_data in roommates noticeboard", e);
-      }
+    if (profile) {
+      setCurrentStudent({
+        id: profile.uid,
+        full_name: profile.fullName || "Student",
+        phone: profile.phone || "+2348000000000",
+        gender: profile.gender || "Female",
+      });
     }
-    
-    return () => clearTimeout(timer);
+  }, [profile]);
+
+  // Fetch posts from database
+  useEffect(() => {
+    const fetchPosts = async () => {
+      setLoading(true);
+      try {
+        const querySnapshot = await getDocs(collection(db, "roommates"));
+        const postsList: RoommatePost[] = [];
+        querySnapshot.forEach((docSnap) => {
+          const data = docSnap.data();
+          postsList.push({
+            id: docSnap.id,
+            student_id: data.student_id,
+            student_name: data.student_name,
+            phone: data.phone,
+            department: data.department,
+            level: data.level,
+            budget_range: data.budget_range,
+            area_preference: data.area_preference,
+            gender_preference: data.gender_preference,
+            extra_info: data.extra_info,
+            created_at: data.created_at ? new Date(data.created_at) : new Date(),
+            status: data.status || "active",
+            student_gender: data.student_gender || "Female",
+          });
+        });
+        setPosts(postsList);
+      } catch (err) {
+        console.error("Error fetching roommates:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPosts();
   }, []);
 
-  const handleCreatePost = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleCreatePost = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!user) {
+      toast.error("Please log in to post a roommate notice!");
+      return;
+    }
     const formData = new FormData(e.currentTarget);
-
-    const newPost: RoommatePost = {
-      id: `post-${Date.now()}`,
-      student_id: currentStudent.id,
-      student_name: currentStudent.full_name,
-      phone: currentStudent.phone,
+    const newPostData = {
+      student_id: user.uid,
+      student_name: profile?.fullName || "Student",
+      phone: profile?.phone || "+2348000000000",
       department: formData.get("department") as string,
       level: formData.get("level") as string,
       budget_range: formData.get("budget") as string,
       area_preference: formData.get("area") as string,
       gender_preference: formData.get("gender") as string,
       extra_info: formData.get("extra") as string,
-      created_at: new Date(),
+      created_at: new Date().toISOString(),
       status: "active",
-      student_gender: currentStudent.gender || "Female",
+      student_gender: profile?.gender || "Female",
     };
 
-    setPosts([newPost, ...posts]);
-    setIsCreateModalOpen(false);
-    toast.success("Post notice created successfully!");
+    try {
+      const docRef = await addDoc(collection(db, "roommates"), newPostData);
+      const createdPost: RoommatePost = {
+        id: docRef.id,
+        ...newPostData,
+        created_at: new Date(newPostData.created_at),
+        status: newPostData.status as "active" | "closed"
+      };
+      setPosts((prev) => [createdPost, ...prev]);
+      toast.success("Post notice created successfully!");
+      setIsCreateModalOpen(false);
+    } catch (err) {
+      console.error(err);
+      toast.error("Error creating notice.");
+    }
   };
 
   const handleSendRequest = (postId: string) => {

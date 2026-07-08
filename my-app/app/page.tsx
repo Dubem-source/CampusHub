@@ -23,7 +23,9 @@ import Header from "../components/Header";
 import Footer from "../components/Footer";
 import LodgeCard from "../components/LodgeCard";
 import ImageCarousel from "../components/ImageCarousel";
-import { formatNaira, getBrowseLodges } from "../lib/lodge-data";
+import { db } from "../lib/firebase";
+import { collection, getDocs, limit, query } from "firebase/firestore";
+import { formatNaira, RoomUnit, Lodge } from "../lib/lodge-data";
 
 const featured = [
   {
@@ -107,14 +109,46 @@ export default function Home() {
   const router = useRouter();
   const [query, setQuery] = React.useState("");
   const [loading, setLoading] = React.useState(true);
+  const [featuredLodges, setFeaturedLodges] = React.useState<(Lodge & { room: RoomUnit })[]>([]);
 
   React.useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 500);
-    return () => clearTimeout(timer);
-  }, []);
+    const fetchFeatured = async () => {
+      try {
+        const lodgesSnap = await getDocs(collection(db, "lodges"));
+        const roomsSnap = await getDocs(collection(db, "rooms"));
 
-  const featuredLodges = React.useMemo(() => {
-    return getBrowseLodges().slice(0, 5);
+        const lodgesMap = new Map<string, any>();
+        lodgesSnap.forEach((doc) => {
+          lodgesMap.set(doc.id, doc.data());
+        });
+
+        const activeListings: any[] = [];
+        roomsSnap.forEach((doc) => {
+          const room = doc.data() as RoomUnit;
+          const lodge = lodgesMap.get(room.lodgeSlug);
+          if (lodge) {
+            activeListings.push({
+              ...lodge,
+              room,
+            });
+          }
+        });
+
+        activeListings.sort((left, right) => {
+          if (left.isOfficial && !right.isOfficial) return -1;
+          if (!left.isOfficial && right.isOfficial) return 1;
+          return (right.rating || 0) - (left.rating || 0);
+        });
+
+        setFeaturedLodges(activeListings.slice(0, 3));
+      } catch (err) {
+        console.error("Error loading homepage featured:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFeatured();
   }, []);
 
   if (loading) {

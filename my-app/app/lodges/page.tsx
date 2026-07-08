@@ -7,6 +7,8 @@ import { useSearchParams } from "next/navigation";
 import Header from "../../components/Header";
 import Footer from "../../components/Footer";
 import LodgeCard from "../../components/LodgeCard";
+import { db } from "../../lib/firebase";
+import { collection, getDocs } from "firebase/firestore";
 import {
   Select,
   SelectContent,
@@ -16,8 +18,8 @@ import {
 } from "../../components/ui/select";
 import {
   formatNaira,
-  getBrowseLodges,
-  getLodgeRooms,
+  RoomUnit,
+  Lodge,
 } from "../../lib/lodge-data";
 
 const sortOptions = [
@@ -53,16 +55,54 @@ function LodgesContent() {
     }
   }, [initialQuery]);
 
-  const dynamicAreas = useMemo(() => {
-    const allListings = getBrowseLodges();
-    const uniqueAreas = Array.from(new Set(allListings.map((item) => item.area)));
-    return ["All", ...uniqueAreas];
+  const [dbListings, setDbListings] = useState<(Lodge & { room: RoomUnit; startingPrice: number })[]>([]);
+  const [dbListingsLoading, setDbListingsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchListings = async () => {
+      setDbListingsLoading(true);
+      try {
+        const lodgesSnap = await getDocs(collection(db, "lodges"));
+        const roomsSnap = await getDocs(collection(db, "rooms"));
+
+        const lodgesMap = new Map<string, any>();
+        lodgesSnap.forEach((doc) => {
+          lodgesMap.set(doc.id, doc.data());
+        });
+
+        const activeListings: any[] = [];
+        roomsSnap.forEach((doc) => {
+          const room = doc.data() as RoomUnit;
+          const lodge = lodgesMap.get(room.lodgeSlug);
+          if (lodge) {
+            activeListings.push({
+              ...lodge,
+              room,
+              startingPrice: room.price,
+            });
+          }
+        });
+
+        setDbListings(activeListings);
+      } catch (err) {
+        console.error("Error fetching lodges:", err);
+      } finally {
+        setDbListingsLoading(false);
+      }
+    };
+
+    fetchListings();
   }, []);
+
+  const dynamicAreas = useMemo(() => {
+    const uniqueAreas = Array.from(new Set(dbListings.map((item) => item.area)));
+    return ["All", ...uniqueAreas];
+  }, [dbListings]);
 
   const listings = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
 
-    return getBrowseLodges()
+    return dbListings
       .filter((item) => {
         const { room, ...lodge } = item;
         const matchesArea = selectedArea === "All" || lodge.area === selectedArea;
@@ -85,9 +125,9 @@ function LodgesContent() {
         }
         return right.rating - left.rating;
       });
-  }, [query, selectedArea, sortBy]);
+  }, [query, selectedArea, sortBy, dbListings]);
 
-  if (pageLoading) {
+  if (pageLoading || dbListingsLoading) {
     return (
       <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-white dark:bg-[#08131e] transition-colors duration-300">
         <div className="relative flex flex-col items-center space-y-4">

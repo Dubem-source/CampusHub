@@ -17,6 +17,7 @@ export interface UserProfile {
   approved: boolean;
   verified: boolean;
   createdAt: string;
+  gender?: string;
 }
 
 interface AuthContextType {
