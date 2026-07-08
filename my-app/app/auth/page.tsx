@@ -19,9 +19,10 @@ import { auth, db } from "@/lib/firebase";
 import { 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
-  sendEmailVerification 
+  sendEmailVerification,
+  signOut
 } from "firebase/auth";
-import { doc, setDoc, getDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc, updateDoc } from "firebase/firestore";
 
 function AuthContent() {
   const router = useRouter();
@@ -78,6 +79,13 @@ function AuthContent() {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
+      if (!user.emailVerified) {
+        setError("Please verify your email address before logging in. We sent a verification link to your email (check spam).");
+        await signOut(auth);
+        setIsLoading(false);
+        return;
+      }
+
       // Fetch user role and fields from Firestore
       const userDoc = await getDoc(doc(db, "users", user.uid));
       let userRole = role;
@@ -86,6 +94,10 @@ function AuthContent() {
       if (userDoc.exists()) {
         userData = userDoc.data();
         userRole = userData.role || role;
+
+        if (!userData.emailVerified && user.emailVerified) {
+          await updateDoc(doc(db, "users", user.uid), { emailVerified: true });
+        }
       }
 
       if (userRole === "agent") {
@@ -430,6 +442,11 @@ function AuthContent() {
                             {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                           </button>
                         </div>
+                        {password.length > 0 && (
+                          <div className={`text-xs font-bold transition-colors text-left pl-2 ${password.length >= 6 ? "text-emerald-600" : "text-rose-500"}`}>
+                            Password should be at least 6 characters
+                          </div>
+                        )}
                         <div className="relative">
                           <input
                             type={showConfirmPassword ? "text" : "password"}
