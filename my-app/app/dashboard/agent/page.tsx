@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
 import { auth, db } from "@/lib/firebase";
-import { doc, setDoc, updateDoc, collection, addDoc, getDocs } from "firebase/firestore";
+import { doc, setDoc, updateDoc, deleteDoc, collection, addDoc, getDocs, query, where } from "firebase/firestore";
 import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from "firebase/auth";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -218,6 +218,63 @@ export default function AgentDashboard() {
     }
   }, [user, authLoading, router]);
 
+  const [listingsLoading, setListingsLoading] = useState(true);
+
+  // Sync rooms listings and stats from Firestore Database
+  useEffect(() => {
+    if (!user) return;
+    const fetchAgentListings = async () => {
+      setListingsLoading(true);
+      try {
+        const roomsSnap = await getDocs(
+          query(collection(db, "rooms"), where("agentId", "==", user.uid))
+        );
+        const fetchedListings: Listing[] = [];
+        let totalViews = 0;
+
+        roomsSnap.forEach((docSnap) => {
+          const data = docSnap.data();
+          const listingItem: Listing = {
+            id: docSnap.id,
+            room_type: data.roomType,
+            price: Number(data.price),
+            entryPrice: Number(data.entryPrice),
+            area: data.area,
+            landmark: data.landmark,
+            building_name: data.building_name,
+            amenities: data.amenities || [],
+            photos: data.photos || [],
+            availability: data.availability as Availability,
+            description: data.description || "",
+            created_at: data.created_at || new Date().toISOString().split("T")[0],
+            viewsCount: Number(data.viewsCount || 0)
+          };
+          fetchedListings.push(listingItem);
+          totalViews += listingItem.viewsCount || 0;
+        });
+
+        fetchedListings.sort((a, b) => b.created_at.localeCompare(a.created_at));
+
+        setAgentData(prev => ({
+          ...prev,
+          listings: fetchedListings,
+          stats: {
+            total_listings: fetchedListings.length,
+            total_views: totalViews,
+            inquiries: prev.stats?.inquiries || 0,
+            avg_rating: prev.stats?.avg_rating || 4.5
+          }
+        }));
+      } catch (err) {
+        console.error("Error fetching agent listings:", err);
+      } finally {
+        setListingsLoading(false);
+      }
+    };
+
+    fetchAgentListings();
+  }, [user]);
+
   // OTP Verification States
   const [showOtpModal, setShowOtpModal] = useState(false);
   const [otpCode, setOtpCode] = useState("");
@@ -264,7 +321,6 @@ export default function AgentDashboard() {
   const [isDark, setIsDark] = useState(false);
   const mainRef = useRef<HTMLElement | null>(null);
   const [mounted, setMounted] = useState(false);
-  const [listingsLoading, setListingsLoading] = useState(false);
   const [overviewLoading, setOverviewLoading] = useState(false);
 
   useEffect(() => {
@@ -275,14 +331,6 @@ export default function AgentDashboard() {
     if (activeTab === 'overview') {
       setOverviewLoading(true);
       const timer = setTimeout(() => setOverviewLoading(false), 500);
-      return () => clearTimeout(timer);
-    }
-  }, [activeTab]);
-
-  useEffect(() => {
-    if (activeTab === 'listings') {
-      setListingsLoading(true);
-      const timer = setTimeout(() => setListingsLoading(false), 500);
       return () => clearTimeout(timer);
     }
   }, [activeTab]);
@@ -606,39 +654,58 @@ export default function AgentDashboard() {
 
   // --- Handlers ---
 
-  const handleSaveProfile = (e: React.FormEvent) => {
+  const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    setAgentData(prev => {
-      const updated = {
+    if (!user) return;
+    try {
+      await updateDoc(doc(db, "users", user.uid), {
+        fullName: profileForm.full_name,
+        phone: profileForm.phone,
+        agent_type: profileForm.agent_type,
+        responseTime: profileForm.responseTime,
+        photo: profileForm.photo
+      });
+      setAgentData(prev => ({
         ...prev,
         full_name: profileForm.full_name,
         phone: profileForm.phone,
         agent_type: profileForm.agent_type,
-        email: profileForm.email,
         responseTime: profileForm.responseTime,
         photo: profileForm.photo
-      };
-      localStorage.setItem("agent_data", JSON.stringify(updated));
-      window.dispatchEvent(new Event("agent-data-updated"));
-      return updated;
-    });
-    toast.success("Profile updated successfully!");
+      }));
+      toast.success("Profile updated successfully!");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to update profile details.");
+    }
   };
 
-  const handleDeleteListing = (id: string) => {
-    setAgentData(prev => ({
-      ...prev,
-      listings: prev.listings.filter(l => l.id !== id)
-    }));
-    toast.success("Listing deleted successfully");
+  const handleDeleteListing = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, "rooms", id));
+      setAgentData(prev => ({
+        ...prev,
+        listings: prev.listings.filter(l => l.id !== id)
+      }));
+      toast.success("Listing deleted successfully");
+    } catch (err) {
+      console.error("Delete room error:", err);
+      toast.error("Failed to delete room listing.");
+    }
   };
 
-  const handleUpdateAvailability = (id: string, availability: Availability) => {
-    setAgentData(prev => ({
-      ...prev,
-      listings: prev.listings.map(l => l.id === id ? { ...l, availability } : l)
-    }));
-    toast.success(`Marked as ${availability}`);
+  const handleUpdateAvailability = async (id: string, availability: Availability) => {
+    try {
+      await updateDoc(doc(db, "rooms", id), { availability });
+      setAgentData(prev => ({
+        ...prev,
+        listings: prev.listings.map(l => l.id === id ? { ...l, availability } : l)
+      }));
+      toast.success(`Marked as ${availability}`);
+    } catch (err) {
+      console.error("Update availability error:", err);
+      toast.error("Failed to update availability status.");
+    }
   };
 
   const handleEditClick = (listing: Listing) => {
@@ -649,17 +716,47 @@ export default function AgentDashboard() {
     }
   };
 
-  const handleSaveEdit = (e: React.FormEvent) => {
+  const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingListing) return;
 
-    setAgentData(prev => ({
-      ...prev,
-      listings: prev.listings.map(l => l.id === editingListing.id ? editingListing : l)
-    }));
+    try {
+      const slug = editingListing.building_name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-");
 
-    handleGoBackToListings();
-    toast.success("Listing updated successfully");
+      // Update parent lodge details
+      await setDoc(doc(db, "lodges", slug), {
+        slug,
+        name: editingListing.building_name,
+        area: editingListing.area,
+        landmark: editingListing.landmark,
+        agentPhone: profile?.phone || "+2348000000000"
+      }, { merge: true });
+
+      // Update room details
+      await updateDoc(doc(db, "rooms", editingListing.id), {
+        lodgeSlug: slug,
+        roomType: editingListing.room_type,
+        price: Number(editingListing.price),
+        entryPrice: Number(editingListing.entryPrice),
+        description: editingListing.description,
+        photos: editingListing.photos,
+        amenities: editingListing.amenities,
+        area: editingListing.area,
+        landmark: editingListing.landmark,
+        building_name: editingListing.building_name,
+      });
+
+      setAgentData(prev => ({
+        ...prev,
+        listings: prev.listings.map(l => l.id === editingListing.id ? editingListing : l)
+      }));
+
+      handleGoBackToListings();
+      toast.success("Listing updated successfully");
+    } catch (err) {
+      console.error("Save edit listing error:", err);
+      toast.error("Failed to update listing in database.");
+    }
   };
 
   const toggleAmenity = (amenity: string) => {
