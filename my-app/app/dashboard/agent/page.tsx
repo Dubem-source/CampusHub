@@ -7,7 +7,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { auth, db, storage } from "@/lib/firebase";
 import { doc, setDoc, updateDoc, deleteDoc, collection, addDoc, getDocs, query, where } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from "firebase/auth";
+import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult, verifyBeforeUpdateEmail, reauthenticateWithCredential, EmailAuthProvider, updatePassword } from "firebase/auth";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard,
@@ -41,6 +41,9 @@ import {
   AlertTriangle,
   Search,
   Eye,
+  Shield,
+  Palette,
+  Monitor,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import Image from "next/image";
@@ -314,6 +317,19 @@ export default function AgentDashboard() {
   const [overviewLoading, setOverviewLoading] = useState(false);
   const [ninUploading, setNinUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [settingsTab, setSettingsTab] = useState<'profile' | 'account' | 'security' | 'appearance' | 'notifications' | 'danger'>('profile');
+  const [whatsAppSameAsPhone, setWhatsAppSameAsPhone] = useState(true);
+  const [changeEmailForm, setChangeEmailForm] = useState({ newEmail: '', password: '' });
+  const [emailChangePending, setEmailChangePending] = useState<string | null>(null);
+  const [isChangingEmail, setIsChangingEmail] = useState(false);
+  const [emailChangeError, setEmailChangeError] = useState<string | null>(null);
+  const [passwordForm, setPasswordForm] = useState({ current: '', new: '', confirm: '' });
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+  const [notifyInquiries, setNotifyInquiries] = useState(true);
+  const [notifyBookingRequests, setNotifyBookingRequests] = useState(true);
+  const [notifyReviews, setNotifyReviews] = useState(true);
+  const [notifyEmail, setNotifyEmail] = useState(true);
+  const [notifyPush, setNotifyPush] = useState(true);
 
   useEffect(() => {
     setMounted(true);
@@ -372,6 +388,7 @@ export default function AgentDashboard() {
   const [profileForm, setProfileForm] = useState({
     full_name: INITIAL_AGENT_DATA.full_name,
     phone: INITIAL_AGENT_DATA.phone,
+    whatsapp: INITIAL_AGENT_DATA.phone,
     email: INITIAL_AGENT_DATA.email,
     agent_type: INITIAL_AGENT_DATA.agent_type,
     responseTime: INITIAL_AGENT_DATA.responseTime,
@@ -401,11 +418,17 @@ export default function AgentDashboard() {
           setProfileForm({
             full_name: parsed.full_name || INITIAL_AGENT_DATA.full_name,
             phone: parsed.phone || INITIAL_AGENT_DATA.phone,
+            whatsapp: parsed.whatsapp || parsed.phone || INITIAL_AGENT_DATA.phone,
             email: parsed.email || INITIAL_AGENT_DATA.email,
             agent_type: parsed.agent_type || INITIAL_AGENT_DATA.agent_type,
             responseTime: parsed.responseTime || INITIAL_AGENT_DATA.responseTime,
             photo: parsed.photo || INITIAL_AGENT_DATA.photo,
           });
+          if (parsed.whatsapp && parsed.whatsapp !== parsed.phone) {
+            setWhatsAppSameAsPhone(false);
+          } else {
+            setWhatsAppSameAsPhone(true);
+          }
         } catch (e) {
           console.error(e);
         }
@@ -519,6 +542,27 @@ export default function AgentDashboard() {
     } else {
       document.documentElement.classList.remove("dark");
       localStorage.setItem("theme", "light");
+    }
+  };
+
+  const changeTheme = (mode: 'light' | 'dark' | 'system') => {
+    if (mode === 'system') {
+      localStorage.removeItem('theme');
+      const isSystemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      setIsDark(isSystemDark);
+      if (isSystemDark) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    } else {
+      localStorage.setItem('theme', mode);
+      setIsDark(mode === 'dark');
+      if (mode === 'dark') {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
     }
   };
 
@@ -667,29 +711,115 @@ export default function AgentDashboard() {
 
   // --- Handlers ---
 
-  const handleSaveProfile = async (e: React.FormEvent) => {
+  const handleUpdateAgentProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    let finalWhatsApp = profileForm.whatsapp;
+    if (whatsAppSameAsPhone) {
+      finalWhatsApp = profileForm.phone;
+    }
+
     try {
-      await updateDoc(doc(db, "users", user.uid), {
-        fullName: profileForm.full_name,
-        phone: profileForm.phone,
-        agent_type: profileForm.agent_type,
-        responseTime: profileForm.responseTime,
-        photo: profileForm.photo
+      if (user) {
+        await updateDoc(doc(db, "users", user.uid), {
+          fullName: profileForm.full_name,
+          phone: profileForm.phone,
+          whatsapp: finalWhatsApp,
+          agentType: profileForm.agent_type,
+          responseTime: profileForm.responseTime,
+          photo: profileForm.photo
+        });
+      }
+
+      setAgentData(prev => {
+        const updated = {
+          ...prev,
+          full_name: profileForm.full_name,
+          phone: profileForm.phone,
+          whatsapp: finalWhatsApp,
+          agent_type: profileForm.agent_type,
+          responseTime: profileForm.responseTime,
+          photo: profileForm.photo
+        };
+        localStorage.setItem("agent_data", JSON.stringify(updated));
+        window.dispatchEvent(new Event("agent-data-updated"));
+        return updated;
       });
-      setAgentData(prev => ({
-        ...prev,
-        full_name: profileForm.full_name,
-        phone: profileForm.phone,
-        agent_type: profileForm.agent_type,
-        responseTime: profileForm.responseTime,
-        photo: profileForm.photo
-      }));
+
       toast.success("Profile updated successfully!");
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      toast.error("Failed to update profile details.");
+      toast.error(err.message || "Failed to update profile details.");
+    }
+  };
+
+  const handleChangeEmailSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !user.email) return;
+
+    setIsChangingEmail(true);
+    setEmailChangeError(null);
+
+    try {
+      // Reauthenticate first
+      const credential = EmailAuthProvider.credential(user.email, changeEmailForm.password);
+      await reauthenticateWithCredential(user, credential);
+
+      // Verify and update email
+      await verifyBeforeUpdateEmail(user, changeEmailForm.newEmail);
+
+      // Save to Firestore as pending
+      await updateDoc(doc(db, "users", user.uid), {
+        pendingEmail: changeEmailForm.newEmail
+      });
+
+      setEmailChangePending(changeEmailForm.newEmail);
+      toast.success("Verification link sent!");
+      setChangeEmailForm({ newEmail: "", password: "" });
+    } catch (err: any) {
+      console.error("Email change error:", err);
+      if (err.code === 'auth/email-already-in-use') {
+        setEmailChangeError("This email is already associated with another account. Please use a different email address.");
+      } else if (err.code === 'auth/wrong-password') {
+        setEmailChangeError("Incorrect current password. Please try again.");
+      } else {
+        setEmailChangeError(err.message || "Failed to update email. Please try again.");
+      }
+    } finally {
+      setIsChangingEmail(false);
+    }
+  };
+
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !user.email) return;
+
+    if (passwordForm.new !== passwordForm.confirm) {
+      toast.error("New passwords do not match!");
+      return;
+    }
+
+    if (passwordForm.new.length < 6) {
+      toast.error("New password should be at least 6 characters long.");
+      return;
+    }
+
+    setIsUpdatingPassword(true);
+    try {
+      const credential = EmailAuthProvider.credential(user.email, passwordForm.current);
+      await reauthenticateWithCredential(user, credential);
+
+      await updatePassword(user, passwordForm.new);
+      toast.success("Password updated successfully!");
+      setPasswordForm({ current: "", new: "", confirm: "" });
+    } catch (err: any) {
+      console.error("Password update error:", err);
+      if (err.code === 'auth/wrong-password') {
+        toast.error("Incorrect current password.");
+      } else {
+        toast.error(err.message || "Failed to update password.");
+      }
+    } finally {
+      setIsUpdatingPassword(false);
     }
   };
 
@@ -2416,127 +2546,575 @@ export default function AgentDashboard() {
 
                   {/* Tab 5: Settings Tab */}
                   {activeTab === "settings" && (
-                    <div className="max-w-4xl mx-auto text-left">
-                      <Card className="border-none shadow-sm bg-white dark:bg-[#0f1d2e] rounded-none sm:rounded-3xl p-6 md:p-8 border-x-0 sm:border">
-                        <CardHeader className="px-6 sm:px-0 pt-0 pb-6 border-b border-gray-100 dark:border-white/10">
-                          <CardTitle className="text-xl font-bold text-navy dark:text-white">Edit Profile Details</CardTitle>
-                          <CardDescription className="text-muted-foreground mt-1">Manage your public agent card information.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="px-0 pt-6">
-                          <form onSubmit={handleSaveProfile} className="space-y-6">
+                    <div className="max-w-4xl mx-auto text-left space-y-6">
+                      {/* Settings Title Header */}
+                      <div className="mb-4 md:mb-8 text-left p-4">
+                        <h1 className="text-3xl md:text-3xl font-extrabold tracking-tight text-navy dark:text-white">
+                          Settings
+                        </h1>
+                        <p className="text-muted-foreground text-xs md:text-sm mt-1">
+                          Manage your account settings and preferences
+                        </p>
+                      </div>
 
-                            {/* Profile Picture Uploader */}
-                            <div className="flex flex-col sm:flex-row items-center gap-5 pb-6 border-b border-gray-100 dark:border-white/10 mb-6">
-                              <div className="relative w-24 h-24 shrink-0">
-                                <img
-                                  src={profileForm.photo}
-                                  alt="Profile Avatar"
-                                  className="w-full h-full rounded-full object-cover border-2 border-gold bg-[#0f1e2d]/10"
-                                />
-                                <label className="absolute bottom-0 right-0 bg-[#C9952A] hover:bg-[#b08222] text-[#0f1e2d] p-2 rounded-full cursor-pointer shadow-md transition-all hover:scale-105 border border-white dark:border-[#0f1d2e] flex items-center justify-center">
-                                  <Edit className="h-4 w-4" />
-                                  <input
-                                    type="file"
-                                    accept="image/*"
-                                    onChange={(e) => {
-                                      const file = e.target.files?.[0];
-                                      if (file) {
-                                        const reader = new FileReader();
-                                        reader.onloadend = () => {
-                                          setTempPhoto(reader.result as string);
-                                          setIsPhotoModalOpen(true);
-                                        };
-                                        reader.readAsDataURL(file);
-                                      }
-                                    }}
-                                    onClick={(e) => {
-                                      (e.target as HTMLInputElement).value = "";
-                                    }}
-                                    className="hidden"
-                                    aria-label="Upload profile picture"
-                                  />
-                                </label>
-                              </div>
-                              <div className="text-center sm:text-left">
-                                <p className="font-bold text-navy dark:text-white text-sm">Profile Picture</p>
-                                <p className="text-xs text-muted-foreground mt-0.5">Click the edit icon to upload a new image. Supports JPG, PNG.</p>
-                              </div>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                              <div className="space-y-2">
-                                <Label className="text-xs font-bold uppercase tracking-widest text-navy/40 dark:text-white/40">Full Name</Label>
-                                <Input
-                                  value={profileForm.full_name}
-                                  onChange={(e) => setProfileForm({ ...profileForm, full_name: e.target.value })}
-                                  className="rounded-xl border-gray-200 dark:border-white/10 bg-transparent text-navy dark:text-white"
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <Label className="text-xs font-bold uppercase tracking-widest text-navy/40 dark:text-white/40">Phone Number</Label>
-                                <Input
-                                  value={profileForm.phone}
-                                  onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
-                                  className="rounded-xl border-gray-200 dark:border-white/10 bg-transparent text-navy dark:text-white"
-                                />
-                              </div>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                              <div className="space-y-2">
-                                <Label className="text-xs font-bold uppercase tracking-widest text-navy/40 dark:text-white/40">Email Address</Label>
-                                <Input
-                                  type="email"
-                                  value={profileForm.email}
-                                  onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
-                                  className="rounded-xl border-gray-200 dark:border-white/10 bg-transparent text-navy dark:text-white"
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <Label className="text-xs font-bold uppercase tracking-widest text-navy/40 dark:text-white/40">Agent Type</Label>
-                                <Select
-                                  value={profileForm.agent_type}
-                                  onValueChange={(val) => setProfileForm({ ...profileForm, agent_type: val ?? "" })}
+                      <div className="flex flex-col lg:flex-row gap-8 text-left">
+                        {/* Left Sidebar categories panel */}
+                        <div className="w-full lg:w-64 shrink-0">
+                          <div className="rounded-3xl bg-white dark:bg-gradient-to-br dark:from-[#0f1d2e] dark:to-[#162535] p-4 border border-black/5 dark:border-white/5 space-y-1 shadow-sm">
+                            {[
+                              { id: 'profile', label: 'Profile', icon: User },
+                              { id: 'account', label: 'Account', icon: Settings },
+                              { id: 'security', label: 'Security', icon: Shield },
+                              { id: 'appearance', label: 'Appearance', icon: Palette },
+                              { id: 'notifications', label: 'Notifications', icon: Bell },
+                              { id: 'danger', label: 'Danger Zone', icon: AlertTriangle }
+                            ].map(cat => {
+                              const isSubActive = settingsTab === cat.id;
+                              return (
+                                <button
+                                  key={cat.id}
+                                  onClick={() => setSettingsTab(cat.id as any)}
+                                  className={cn(
+                                    "w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl font-bold text-sm transition-all duration-150 cursor-pointer border-0",
+                                    isSubActive
+                                      ? "bg-gold text-navy shadow-md shadow-gold/20"
+                                      : "text-gray-550 dark:text-gray-400 hover:bg-gray-55/10 dark:hover:bg-white/5 hover:text-navy dark:hover:text-white"
+                                  )}
                                 >
-                                  <SelectTrigger className="rounded-xl border-gray-200 dark:border-white/10 bg-transparent text-navy dark:text-white">
-                                    <SelectValue placeholder="Select type" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="individual">Individual Agent</SelectItem>
-                                    <SelectItem value="company">Agency / Company</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                            </div>
+                                  <cat.icon className="w-4 h-4 shrink-0" />
+                                  <span>{cat.label}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                              <div className="space-y-2">
-                                <Label className="text-xs font-bold uppercase tracking-widest text-navy/40 dark:text-white/40">Response Time description</Label>
-                                <Input
-                                  value={profileForm.responseTime}
-                                  onChange={(e) => setProfileForm({ ...profileForm, responseTime: e.target.value })}
-                                  className="rounded-xl border-gray-200 dark:border-white/10 bg-transparent text-navy dark:text-white"
-                                  placeholder="e.g. Replies within 5 mins"
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <Label className="text-xs font-bold uppercase tracking-widest text-navy/40 dark:text-white/40">NIN / Verification ID (Read-only)</Label>
-                                <Input
-                                  value="NIN-2938472901-CAMP"
-                                  disabled
-                                  className="rounded-xl border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/5 text-muted-foreground"
-                                />
-                              </div>
-                            </div>
+                        {/* Right content panel */}
+                        <div className="flex-grow">
+                          <div className="rounded-3xl bg-white dark:bg-gradient-to-br dark:from-[#0f1d2e] dark:to-[#162535] p-6 md:p-8 border border-black/5 dark:border-white/5 shadow-sm min-h-[400px] overflow-hidden">
+                            <AnimatePresence mode="wait">
 
-                            <div className="border-t border-gray-100 dark:border-white/10 pt-6 flex justify-end">
-                              <Button type="submit" className="rounded-xl bg-gold hover:bg-gold/90 text-navy font-bold px-8">
-                                Save Changes
-                              </Button>
-                            </div>
-                          </form>
-                        </CardContent>
-                      </Card>
+                              {/* Sub-tab 1: Profile Settings */}
+                              {settingsTab === 'profile' && (
+                                <motion.div
+                                  key="profile"
+                                  initial={{ opacity: 0, x: 16 }}
+                                  animate={{ opacity: 1, x: 0 }}
+                                  exit={{ opacity: 0, x: -16 }}
+                                  transition={{ duration: 0.15 }}
+                                >
+                                  <form onSubmit={handleUpdateAgentProfile} className="space-y-6">
+                                    <div>
+                                      <h3 className="text-xl font-bold text-navy dark:text-white">Profile Settings</h3>
+                                      <p className="text-xs text-gray-550 dark:text-gray-400 mt-1">Manage your public agent card details</p>
+                                    </div>
+
+                                    {/* Profile Photo upload */}
+                                    <div className="border-b border-black/5 dark:border-white/5 pb-6">
+                                      <div className="flex items-center gap-4">
+                                        <div className="relative">
+                                          <div className="relative flex h-20 w-20 items-center justify-center rounded-full bg-navy/5 dark:bg-white/5 text-2xl font-bold text-gold ring-4 ring-white dark:ring-[#0f1d2e] shadow-md overflow-hidden">
+                                            {profileForm.photo ? (
+                                              <img src={profileForm.photo} alt="Avatar" className="h-full w-full object-cover" />
+                                            ) : (
+                                              "AG"
+                                            )}
+                                          </div>
+                                          <button
+                                            type="button"
+                                            onClick={() => document.getElementById("settings-avatar-upload")?.click()}
+                                            className="absolute bottom-0 right-0 flex h-7 w-7 items-center justify-center rounded-full bg-gold text-navy shadow-md ring-2 ring-white dark:ring-[#0f1d2e] hover:scale-105 transition cursor-pointer border-0"
+                                          >
+                                            <Edit className="h-3 w-3" />
+                                          </button>
+                                          <input
+                                            id="settings-avatar-upload"
+                                            type="file"
+                                            accept="image/*"
+                                            className="hidden"
+                                            onChange={(e) => {
+                                              const file = e.target.files?.[0];
+                                              if (file) {
+                                                const reader = new FileReader();
+                                                reader.onloadend = () => {
+                                                  setTempPhoto(reader.result as string);
+                                                  setIsPhotoModalOpen(true);
+                                                };
+                                                reader.readAsDataURL(file);
+                                              }
+                                            }}
+                                          />
+                                        </div>
+                                        <div>
+                                          <h4 className="text-sm font-bold text-navy dark:text-white">Profile Picture</h4>
+                                          <p className="text-[11px] text-gray-550 dark:text-gray-400 mt-0.5">JPG or PNG. Max 2MB.</p>
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    <div className="grid gap-4 sm:grid-cols-2">
+                                      {/* Full Name */}
+                                      <div className="space-y-1.5">
+                                        <Label className="text-xs font-bold uppercase tracking-wider text-gray-400">Full Name</Label>
+                                        <Input
+                                          value={profileForm.full_name}
+                                          onChange={(e) => setProfileForm({ ...profileForm, full_name: e.target.value })}
+                                          className="rounded-xl border-gray-200 dark:border-white/10 bg-transparent text-navy dark:text-white"
+                                        />
+                                      </div>
+
+                                      {/* Phone Number */}
+                                      <div className="space-y-1.5">
+                                        <Label className="text-xs font-bold uppercase tracking-wider text-gray-400">Phone Number</Label>
+                                        <Input
+                                          value={profileForm.phone}
+                                          onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
+                                          className="rounded-xl border-gray-200 dark:border-white/10 bg-transparent text-navy dark:text-white"
+                                        />
+                                      </div>
+
+                                      {/* Checkbox: My WhatsApp number is same */}
+                                      <div className="col-span-full py-2">
+                                        <label className="flex items-center gap-2.5 cursor-pointer text-xs font-semibold text-navy dark:text-white">
+                                          <input
+                                            type="checkbox"
+                                            checked={whatsAppSameAsPhone}
+                                            onChange={(e) => setWhatsAppSameAsPhone(e.target.checked)}
+                                            className="h-4 w-4 rounded border-gray-300 text-gold focus:ring-gold cursor-pointer"
+                                          />
+                                          <span>My WhatsApp number is the same as my phone number</span>
+                                        </label>
+                                      </div>
+
+                                      {/* WhatsApp Number */}
+                                      {!whatsAppSameAsPhone && (
+                                        <div className="space-y-1.5 col-span-full animate-in fade-in duration-200">
+                                          <Label className="text-xs font-bold uppercase tracking-wider text-gray-400">WhatsApp Number</Label>
+                                          <Input
+                                            value={profileForm.whatsapp}
+                                            onChange={(e) => setProfileForm({ ...profileForm, whatsapp: e.target.value })}
+                                            className="rounded-xl border-gray-200 dark:border-white/10 bg-transparent text-navy dark:text-white"
+                                            placeholder="Enter WhatsApp number"
+                                          />
+                                        </div>
+                                      )}
+
+                                      {/* Email address (Read-only) */}
+                                      <div className="space-y-1.5 col-span-full">
+                                        <Label className="text-xs font-bold uppercase tracking-wider text-gray-400">Email Address (Read-only)</Label>
+                                        <Input
+                                          value={profileForm.email}
+                                          disabled
+                                          className="rounded-xl border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/5 text-muted-foreground cursor-not-allowed"
+                                        />
+                                      </div>
+
+                                      {/* Agent Type */}
+                                      <div className="space-y-1.5">
+                                        <Label className="text-xs font-bold uppercase tracking-wider text-gray-400">Agent Type</Label>
+                                        <Select
+                                          value={profileForm.agent_type}
+                                          onValueChange={(val) => setProfileForm({ ...profileForm, agent_type: val ?? "" })}
+                                        >
+                                          <SelectTrigger className="rounded-xl border-gray-200 dark:border-white/10 bg-transparent text-navy dark:text-white">
+                                            <SelectValue placeholder="Select type" />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            <SelectItem value="individual">Individual Agent</SelectItem>
+                                            <SelectItem value="company">Agency / Company</SelectItem>
+                                          </SelectContent>
+                                        </Select>
+                                      </div>
+
+                                      {/* Response Time Description */}
+                                      <div className="space-y-1.5">
+                                        <Label className="text-xs font-bold uppercase tracking-wider text-gray-400">Response Time Description</Label>
+                                        <Input
+                                          value={profileForm.responseTime}
+                                          onChange={(e) => setProfileForm({ ...profileForm, responseTime: e.target.value })}
+                                          className="rounded-xl border-gray-200 dark:border-white/10 bg-transparent text-navy dark:text-white"
+                                          placeholder="e.g. Replies within 5 mins"
+                                        />
+                                      </div>
+                                    </div>
+
+                                    <div className="pt-4 text-right border-t border-black/5 dark:border-white/5">
+                                      <Button type="submit" className="rounded-full bg-gold hover:bg-gold/90 text-navy font-bold px-8 shadow-md">
+                                        Update Profile
+                                      </Button>
+                                    </div>
+                                  </form>
+                                </motion.div>
+                              )}
+
+                              {/* Sub-tab 2: Account settings (Change Email) */}
+                              {settingsTab === 'account' && (
+                                <motion.div
+                                  key="account"
+                                  initial={{ opacity: 0, x: 16 }}
+                                  animate={{ opacity: 1, x: 0 }}
+                                  exit={{ opacity: 0, x: -16 }}
+                                  transition={{ duration: 0.15 }}
+                                >
+                                  <form onSubmit={handleChangeEmailSubmit} className="space-y-6">
+                                    <div>
+                                      <h3 className="text-xl font-bold text-navy dark:text-white">Account Credentials</h3>
+                                      <p className="text-xs text-gray-550 dark:text-gray-400 mt-1">Manage your account email and access details</p>
+                                    </div>
+
+                                    <div className="p-4 bg-amber-50 dark:bg-amber-500/10 border border-amber-200/20 text-amber-700 dark:text-amber-300 rounded-2xl text-xs space-y-1.5 leading-relaxed text-left">
+                                      <span className="font-bold flex items-center gap-1.5 uppercase tracking-wider text-[10px]">
+                                        <Info size={14} /> Security Alert Notice
+                                      </span>
+                                      <p>Changing your email will require verification before it can be used for future sign-ins. An update request notice will also be sent to your old email address to keep you protected.</p>
+                                    </div>
+
+                                    {emailChangePending ? (
+                                      <div className="p-6 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400 rounded-3xl text-sm text-center space-y-3">
+                                        <p className="font-extrabold text-base">Verification Link Sent!</p>
+                                        <p className="text-xs leading-relaxed max-w-sm mx-auto">
+                                          We&apos;ve sent a verification link to <strong className="underline text-gold">{emailChangePending}</strong>. Please check your inbox and verify your new email address to complete the transition.
+                                        </p>
+                                        <Button
+                                          type="button"
+                                          variant="outline"
+                                          onClick={() => setEmailChangePending(null)}
+                                          className="rounded-xl text-xs border-emerald-500/30 text-emerald-600 dark:text-emerald-400"
+                                        >
+                                          Change another email
+                                        </Button>
+                                      </div>
+                                    ) : (
+                                      <div className="space-y-4 max-w-md">
+                                        {/* Current Email */}
+                                        <div className="space-y-1.5">
+                                          <Label className="text-xs font-bold uppercase tracking-wider text-gray-400">Current Email Address</Label>
+                                          <Input
+                                            value={user?.email || "dubem@example.com"}
+                                            disabled
+                                            className="rounded-xl border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/5 text-muted-foreground cursor-not-allowed"
+                                          />
+                                        </div>
+
+                                        {/* New Email */}
+                                        <div className="space-y-1.5">
+                                          <Label className="text-xs font-bold uppercase tracking-wider text-gray-400">New Email Address</Label>
+                                          <Input
+                                            type="email"
+                                            required
+                                            placeholder="Enter new email address"
+                                            value={changeEmailForm.newEmail}
+                                            onChange={(e) => setChangeEmailForm({ ...changeEmailForm, newEmail: e.target.value })}
+                                            className="rounded-xl border-gray-200 dark:border-white/10 bg-transparent text-navy dark:text-white"
+                                          />
+                                        </div>
+
+                                        {/* Current Password */}
+                                        <div className="space-y-1.5">
+                                          <Label className="text-xs font-bold uppercase tracking-wider text-gray-400">Confirm Current Password</Label>
+                                          <Input
+                                            type="password"
+                                            required
+                                            placeholder="Enter your current password"
+                                            value={changeEmailForm.password}
+                                            onChange={(e) => setChangeEmailForm({ ...changeEmailForm, password: e.target.value })}
+                                            className="rounded-xl border-gray-200 dark:border-white/10 bg-transparent text-navy dark:text-white"
+                                          />
+                                        </div>
+
+                                        {emailChangeError && (
+                                          <div className="p-3.5 bg-rose-50 dark:bg-rose-500/10 border border-rose-100 dark:border-rose-500/20 text-rose-600 dark:text-rose-400 rounded-2xl text-xs font-medium text-left">
+                                            {emailChangeError}
+                                          </div>
+                                        )}
+
+                                        <div className="pt-2">
+                                          <Button
+                                            type="submit"
+                                            disabled={isChangingEmail}
+                                            className="rounded-full bg-gold hover:bg-gold/90 text-navy font-bold px-8 shadow-md flex items-center justify-center gap-2"
+                                          >
+                                            {isChangingEmail ? (
+                                              <>
+                                                <svg className="animate-spin h-4 w-4 text-navy" viewBox="0 0 24 24">
+                                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                                                </svg>
+                                                Updating Email...
+                                              </>
+                                            ) : (
+                                              "Change Email"
+                                            )}
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </form>
+                                </motion.div>
+                              )}
+
+                              {/* Sub-tab 3: Security Tab */}
+                              {settingsTab === 'security' && (
+                                <motion.div
+                                  key="security"
+                                  initial={{ opacity: 0, x: 16 }}
+                                  animate={{ opacity: 1, x: 0 }}
+                                  exit={{ opacity: 0, x: -16 }}
+                                  transition={{ duration: 0.15 }}
+                                >
+                                  <div className="space-y-8">
+                                    {/* Password Reset form */}
+                                    <form onSubmit={handleUpdatePassword} className="space-y-6 border-b border-black/5 dark:border-white/5 pb-8">
+                                      <div>
+                                        <h3 className="text-xl font-bold text-navy dark:text-white">Security Credentials</h3>
+                                        <p className="text-xs text-gray-550 dark:text-gray-400 mt-1">Manage your account login credentials</p>
+                                      </div>
+                                      <div className="space-y-4 max-w-md">
+                                        <div className="space-y-1.5">
+                                          <Label className="text-xs font-bold uppercase tracking-wider text-gray-400">Current Password</Label>
+                                          <Input
+                                            type="password"
+                                            required
+                                            placeholder="Enter current password"
+                                            value={passwordForm.current}
+                                            onChange={(e) => setPasswordForm({ ...passwordForm, current: e.target.value })}
+                                            className="rounded-xl border-gray-200 dark:border-white/10 bg-transparent text-navy dark:text-white"
+                                          />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                          <Label className="text-xs font-bold uppercase tracking-wider text-gray-400">New Password</Label>
+                                          <Input
+                                            type="password"
+                                            required
+                                            placeholder="Enter new password (min. 6 characters)"
+                                            value={passwordForm.new}
+                                            onChange={(e) => setPasswordForm({ ...passwordForm, new: e.target.value })}
+                                            className="rounded-xl border-gray-200 dark:border-white/10 bg-transparent text-navy dark:text-white"
+                                          />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                          <Label className="text-xs font-bold uppercase tracking-wider text-gray-400">Confirm New Password</Label>
+                                          <Input
+                                            type="password"
+                                            required
+                                            placeholder="Confirm new password"
+                                            value={passwordForm.confirm}
+                                            onChange={(e) => setPasswordForm({ ...passwordForm, confirm: e.target.value })}
+                                            className="rounded-xl border-gray-200 dark:border-white/10 bg-transparent text-navy dark:text-white"
+                                          />
+                                        </div>
+                                      </div>
+                                      <div className="pt-2">
+                                        <Button type="submit" disabled={isUpdatingPassword} className="rounded-full bg-gold hover:bg-gold/90 text-navy font-bold px-8 shadow-md">
+                                          {isUpdatingPassword ? "Updating..." : "Change Password"}
+                                        </Button>
+                                      </div>
+                                    </form>
+
+                                    {/* Mock 2FA & active sessions */}
+                                    <div className="space-y-6 text-left">
+                                      <div className="space-y-3">
+                                        <h4 className="text-sm font-extrabold uppercase tracking-wider text-gray-400">Two-Factor Authentication</h4>
+                                        <label className="flex items-start gap-3 rounded-2xl bg-gray-50/50 dark:bg-white/5 p-4 border border-black/5 dark:border-white/5 cursor-pointer hover:bg-gray-100 dark:hover:bg-white/10 transition max-w-xl">
+                                          <input
+                                            type="checkbox"
+                                            defaultChecked={false}
+                                            className="mt-1 h-4 w-4 rounded border-gray-300 text-gold focus:ring-gold cursor-pointer"
+                                          />
+                                          <div className="space-y-0.5 text-left">
+                                            <span className="text-sm font-bold text-navy dark:text-white">Enable 2FA Verification</span>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400">Require an OTP code sent to your phone or authentication app during sign in.</p>
+                                          </div>
+                                        </label>
+                                      </div>
+
+                                      <div className="space-y-3 pt-2">
+                                        <h4 className="text-sm font-extrabold uppercase tracking-wider text-gray-400">Active Sessions</h4>
+                                        <div className="space-y-3 max-w-xl">
+                                          {[
+                                            { device: "Chrome on Windows (Current)", ip: "102.89.34.12", location: "Owerri, Nigeria", status: "Active Now" },
+                                            { device: "Safari on iPhone 15", ip: "102.89.44.89", location: "Lagos, Nigeria", status: "2 days ago" }
+                                          ].map((session, idx) => (
+                                            <div key={idx} className="flex items-center justify-between p-4 bg-gray-50/50 dark:bg-white/5 rounded-2xl border border-black/5 dark:border-white/5 text-xs text-left">
+                                              <div className="space-y-0.5">
+                                                <p className="font-bold text-navy dark:text-white">{session.device}</p>
+                                                <p className="text-gray-400">{session.location} · {session.ip}</p>
+                                              </div>
+                                              <span className={cn(
+                                                "px-2.5 py-0.5 rounded-full font-bold uppercase text-[9px] tracking-wider border",
+                                                session.status === "Active Now"
+                                                  ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
+                                                  : "bg-gray-500/20 text-gray-400 border-gray-500/30"
+                                              )}>
+                                                {session.status}
+                                              </span>
+                                            </div>
+                                          ))}
+
+                                          <div className="pt-2">
+                                            <Button
+                                              type="button"
+                                              onClick={() => toast.success("Successfully logged out of all other devices.")}
+                                              className="rounded-xl border border-rose-500/30 hover:bg-rose-500/10 text-rose-500 bg-transparent text-xs font-bold cursor-pointer"
+                                            >
+                                              Logout All Devices
+                                            </Button>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </motion.div>
+                              )}
+
+                              {/* Sub-tab 4: Appearance (Theme selection) */}
+                              {settingsTab === 'appearance' && (
+                                <motion.div
+                                  key="appearance"
+                                  initial={{ opacity: 0, x: 16 }}
+                                  animate={{ opacity: 1, x: 0 }}
+                                  exit={{ opacity: 0, x: -16 }}
+                                  transition={{ duration: 0.15 }}
+                                >
+                                  <div className="space-y-6">
+                                    <div>
+                                      <h3 className="text-xl font-bold text-navy dark:text-white">Appearance Settings</h3>
+                                      <p className="text-xs text-gray-555 dark:text-gray-400 mt-1">Customize the interface look, dark modes, and visual layouts</p>
+                                    </div>
+                                    <div className="space-y-4 text-left">
+                                      <span className="text-xs font-bold uppercase tracking-wider text-gray-455">Select Theme Mode</span>
+                                      <div className="grid grid-cols-3 gap-4 max-w-xl">
+                                        {[
+                                          { id: 'light', label: 'Light', icon: Sun },
+                                          { id: 'dark', label: 'Dark', icon: Moon },
+                                          { id: 'system', label: 'System', icon: Monitor }
+                                        ].map(themeOpt => {
+                                          const isThemeActive = themeOpt.id === 'system'
+                                            ? !localStorage.getItem('theme')
+                                            : (themeOpt.id === 'dark' ? isDark && localStorage.getItem('theme') : !isDark && localStorage.getItem('theme'));
+                                          return (
+                                            <button
+                                              key={themeOpt.id}
+                                              type="button"
+                                              onClick={() => changeTheme(themeOpt.id as any)}
+                                              className={cn(
+                                                "flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border transition-all cursor-pointer bg-gray-50 dark:bg-[#162535] border-0",
+                                                isThemeActive
+                                                  ? "border-gold ring-2 ring-gold/20 text-gold dark:text-gold"
+                                                  : "border-black/5 dark:border-white/5 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10"
+                                              )}
+                                            >
+                                              <themeOpt.icon className="h-6 w-6" />
+                                              <span className="text-xs font-bold uppercase tracking-wider">{themeOpt.label}</span>
+                                            </button>
+                                          );
+                                        })}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </motion.div>
+                              )}
+
+                              {/* Sub-tab 5: Notifications */}
+                              {settingsTab === 'notifications' && (
+                                <motion.div
+                                  key="notifications"
+                                  initial={{ opacity: 0, x: 16 }}
+                                  animate={{ opacity: 1, x: 0 }}
+                                  exit={{ opacity: 0, x: -16 }}
+                                  transition={{ duration: 0.15 }}
+                                >
+                                  <div className="space-y-6">
+                                    <div>
+                                      <h3 className="text-xl font-bold text-navy dark:text-white">Notification Channel Preferences</h3>
+                                      <p className="text-xs text-gray-555 dark:text-gray-400 mt-1">Configure channels for inquiry and review updates</p>
+                                    </div>
+                                    <div className="space-y-4 max-w-lg text-left">
+                                      {[
+                                        { state: notifyInquiries, setter: setNotifyInquiries, title: "New Inquiry", desc: "Notify me when a student asks a question about my listings." },
+                                        { state: notifyBookingRequests, setter: setNotifyBookingRequests, title: "Booking Request", desc: "Notify me when a student initiates a direct booking slot request." },
+                                        { state: notifyReviews, setter: setNotifyReviews, title: "Reviews", desc: "Send alerts when students leave feedback or ratings on my listings." },
+                                        { state: notifyEmail, setter: setNotifyEmail, title: "Email Notifications", desc: "Send copy summaries to my registered agent email address." },
+                                        { state: notifyPush, setter: setNotifyPush, title: "Push Notifications", desc: "Deliver live alert sounds and banners in my browser window." }
+                                      ].map((item, idx) => (
+                                        <label key={idx} className="flex items-start gap-3 rounded-2xl bg-gray-50 dark:bg-white/5 p-4 border border-black/5 dark:border-white/5 cursor-pointer hover:bg-gray-100 dark:hover:bg-white/10 transition">
+                                          <input
+                                            type="checkbox"
+                                            checked={item.state}
+                                            onChange={(e) => item.setter(e.target.checked)}
+                                            className="mt-1 h-4 w-4 rounded border-gray-300 text-gold focus:ring-gold cursor-pointer"
+                                          />
+                                          <div className="space-y-0.5 text-left">
+                                            <span className="text-sm font-bold text-navy dark:text-white">{item.title}</span>
+                                            <p className="text-xs text-gray-550 dark:text-gray-400">{item.desc}</p>
+                                          </div>
+                                        </label>
+                                      ))}
+                                    </div>
+
+                                    <div className="pt-4">
+                                      <Button
+                                        type="button"
+                                        onClick={() => toast.success("Notification preferences saved successfully.")}
+                                        className="rounded-full bg-gold hover:bg-gold/90 text-navy font-bold px-8 shadow-md"
+                                      >
+                                        Save Preferences
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </motion.div>
+                              )}
+
+                              {/* Sub-tab 6: Danger Zone */}
+                              {settingsTab === 'danger' && (
+                                <motion.div
+                                  key="danger"
+                                  initial={{ opacity: 0, x: 16 }}
+                                  animate={{ opacity: 1, x: 0 }}
+                                  exit={{ opacity: 0, x: -16 }}
+                                  transition={{ duration: 0.15 }}
+                                >
+                                  <div className="space-y-6 text-left">
+                                    <div>
+                                      <h3 className="text-xl font-bold text-rose-600 dark:text-rose-400">Danger Zone</h3>
+                                      <p className="text-xs text-gray-555 dark:text-gray-400 mt-1">Irreversible account cancellation actions</p>
+                                    </div>
+
+                                    <div className="p-5 bg-rose-50 dark:bg-rose-500/5 rounded-3xl border border-rose-500/10 space-y-4 max-w-xl">
+                                      <div className="space-y-1 text-left">
+                                        <h4 className="text-sm font-bold text-rose-700 dark:text-rose-455">Deactivate Account</h4>
+                                        <p className="text-xs text-rose-900/60 dark:text-rose-300/60">Temporarily hide all listed rooms from CampusHub browser search results. You can reactivate your account at any time.</p>
+                                      </div>
+                                      <Button
+                                        type="button"
+                                        onClick={() => toast.error("Account deactivation is disabled in test mode.")}
+                                        className="rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs px-5 py-2.5 cursor-pointer border-0 shadow-sm"
+                                      >
+                                        Deactivate Account
+                                      </Button>
+                                    </div>
+
+                                    <div className="p-5 bg-rose-50 dark:bg-rose-500/5 rounded-3xl border border-rose-500/10 space-y-4 max-w-xl">
+                                      <div className="space-y-1 text-left">
+                                        <h4 className="text-sm font-bold text-rose-700 dark:text-rose-455">Delete Account</h4>
+                                        <p className="text-xs text-rose-900/60 dark:text-rose-300/60">Permanently delete your profile documents, verify badges, and active listings from database. This action is irreversible.</p>
+                                      </div>
+                                      <Button
+                                        type="button"
+                                        onClick={() => toast.error("Account deletion is disabled in test mode.")}
+                                        className="rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs px-5 py-2.5 cursor-pointer border-0 shadow-sm"
+                                      >
+                                        Delete Account
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </motion.div>
+                              )}
+
+                            </AnimatePresence>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </>
