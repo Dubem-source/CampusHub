@@ -531,8 +531,37 @@ export default function AgentDashboard() {
   };
 
   const handleSendOtp = async () => {
-    if (!recaptchaVerifier) {
-      toast.error("reCAPTCHA verifier not initialized. Please refresh and try again.");
+    let verifier = recaptchaVerifier;
+    if (!verifier && typeof window !== "undefined") {
+      try {
+        const container = document.getElementById("recaptcha-container");
+        if (!container) {
+          const div = document.createElement("div");
+          div.id = "recaptcha-container";
+          div.className = "hidden";
+          document.body.appendChild(div);
+        }
+        verifier = new RecaptchaVerifier(
+          auth,
+          "recaptcha-container",
+          {
+            size: "invisible",
+            callback: () => {},
+            "expired-callback": () => {
+              toast.error("reCAPTCHA expired. Please try again.");
+            }
+          }
+        );
+        setRecaptchaVerifier(verifier);
+      } catch (err) {
+        console.error("reCAPTCHA initialization error:", err);
+        toast.error("Verification system could not be initialized. Please refresh.");
+        return;
+      }
+    }
+
+    if (!verifier) {
+      toast.error("Verification system is not ready. Please try again.");
       return;
     }
     setIsSendingOtp(true);
@@ -547,7 +576,7 @@ export default function AgentDashboard() {
     }
 
     try {
-      const result = await signInWithPhoneNumber(auth, formattedPhone, recaptchaVerifier);
+      const result = await signInWithPhoneNumber(auth, formattedPhone, verifier);
       setConfirmationResult(result);
       setShowOtpModal(true);
       toast.success("OTP sent to your phone number!");
