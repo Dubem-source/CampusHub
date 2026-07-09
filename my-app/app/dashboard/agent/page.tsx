@@ -5,9 +5,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
 import { auth, db, storage } from "@/lib/firebase";
-import { doc, setDoc, updateDoc, deleteDoc, collection, addDoc, getDocs, query, where } from "firebase/firestore";
+import { doc, setDoc, updateDoc, deleteDoc, collection, addDoc, getDocs, query, where, onSnapshot } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult, verifyBeforeUpdateEmail, reauthenticateWithCredential, EmailAuthProvider, updatePassword } from "firebase/auth";
+import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult, verifyBeforeUpdateEmail, reauthenticateWithCredential, EmailAuthProvider, updatePassword, updateProfile } from "firebase/auth";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard,
@@ -102,6 +102,7 @@ const INITIAL_AGENT_DATA = {
   id: 'agent1',
   full_name: 'Johnson Okonkwo',
   phone: '08012345678',
+  whatsapp: '08012345678',
   agent_type: 'individual',
   verified: false,
   approved: false,
@@ -113,7 +114,7 @@ const INITIAL_AGENT_DATA = {
   ninImageName: null as string | null,
   email: 'johnson@campushub.com',
   responseTime: 'Replies within 5 mins',
-  photo: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
+  photo: 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y',
   joinedDate: 'Oct 2025',
   stats: {
     total_listings: 4,
@@ -317,6 +318,7 @@ export default function AgentDashboard() {
   const [overviewLoading, setOverviewLoading] = useState(false);
   const [ninUploading, setNinUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [selectedDpFile, setSelectedDpFile] = useState<File | null>(null);
   const [settingsTab, setSettingsTab] = useState<'profile' | 'account' | 'security' | 'appearance' | 'notifications' | 'danger'>('profile');
   const [whatsAppSameAsPhone, setWhatsAppSameAsPhone] = useState(true);
   const [changeEmailForm, setChangeEmailForm] = useState({ newEmail: '', password: '' });
@@ -449,6 +451,45 @@ export default function AgentDashboard() {
       window.removeEventListener("agent-data-updated", handleSync);
     };
   }, []);
+
+  // Real-time Firestore user document synchronization
+  useEffect(() => {
+    if (!user) return;
+    const unsub = onSnapshot(doc(db, "users", user.uid), (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setAgentData(prev => {
+          const updated = {
+            ...prev,
+            full_name: data.fullName || data.name || prev.full_name,
+            phone: data.phone || prev.phone,
+            whatsapp: data.whatsapp || data.phone || prev.whatsapp,
+            email: data.email || prev.email,
+            agent_type: data.agentType || prev.agent_type,
+            verified: data.verified !== undefined ? data.verified : prev.verified,
+            approved: data.approved !== undefined ? data.approved : prev.approved,
+            emailVerified: data.emailVerified !== undefined ? data.emailVerified : prev.emailVerified,
+            phoneVerified: data.phoneVerified !== undefined ? data.phoneVerified : prev.phoneVerified,
+            ninUploaded: data.ninUploaded !== undefined ? data.ninUploaded : prev.ninUploaded,
+            photo: data.photoURL || data.photo || prev.photo,
+          };
+          localStorage.setItem("agent_data", JSON.stringify(updated));
+          return updated;
+        });
+        setProfileForm(prev => ({
+          ...prev,
+          full_name: data.fullName || data.name || prev.full_name,
+          phone: data.phone || prev.phone,
+          whatsapp: data.whatsapp || data.phone || prev.whatsapp,
+          email: data.email || prev.email,
+          agent_type: data.agentType || prev.agent_type,
+          responseTime: data.responseTime || prev.responseTime,
+          photo: data.photoURL || data.photo || prev.photo,
+        }));
+      }
+    });
+    return () => unsub();
+  }, [user]);
 
   // Update notification list on verification status change
   useEffect(() => {
@@ -2635,6 +2676,7 @@ export default function AgentDashboard() {
                                             onChange={(e) => {
                                               const file = e.target.files?.[0];
                                               if (file) {
+                                                setSelectedDpFile(file);
                                                 const reader = new FileReader();
                                                 reader.onloadend = () => {
                                                   setTempPhoto(reader.result as string);
@@ -2659,7 +2701,7 @@ export default function AgentDashboard() {
                                         <Input
                                           value={profileForm.full_name}
                                           onChange={(e) => setProfileForm({ ...profileForm, full_name: e.target.value })}
-                                          className="rounded-xl border-gray-200 dark:border-white/10 bg-transparent text-navy dark:text-white"
+                                          className="h-12 rounded-xl py-3 px-4 border border-gray-200 dark:border-white/10 bg-gray-50/30 dark:bg-white/5 text-navy dark:text-white"
                                         />
                                       </div>
 
@@ -2669,7 +2711,7 @@ export default function AgentDashboard() {
                                         <Input
                                           value={profileForm.phone}
                                           onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
-                                          className="rounded-xl border-gray-200 dark:border-white/10 bg-transparent text-navy dark:text-white"
+                                          className="h-12 rounded-xl py-3 px-4 border border-gray-200 dark:border-white/10 bg-gray-50/30 dark:bg-white/5 text-navy dark:text-white"
                                         />
                                       </div>
 
@@ -2680,7 +2722,7 @@ export default function AgentDashboard() {
                                             type="checkbox"
                                             checked={whatsAppSameAsPhone}
                                             onChange={(e) => setWhatsAppSameAsPhone(e.target.checked)}
-                                            className="h-4 w-4 rounded border-gray-300 text-gold focus:ring-gold cursor-pointer"
+                                            className="h-4 w-4 rounded border-gray-350 text-gold focus:ring-gold cursor-pointer"
                                           />
                                           <span>My WhatsApp number is the same as my phone number</span>
                                         </label>
@@ -2693,7 +2735,7 @@ export default function AgentDashboard() {
                                           <Input
                                             value={profileForm.whatsapp}
                                             onChange={(e) => setProfileForm({ ...profileForm, whatsapp: e.target.value })}
-                                            className="rounded-xl border-gray-200 dark:border-white/10 bg-transparent text-navy dark:text-white"
+                                            className="h-12 rounded-xl py-3 px-4 border border-gray-200 dark:border-white/10 bg-gray-50/30 dark:bg-white/5 text-navy dark:text-white"
                                             placeholder="Enter WhatsApp number"
                                           />
                                         </div>
@@ -2705,7 +2747,7 @@ export default function AgentDashboard() {
                                         <Input
                                           value={profileForm.email}
                                           disabled
-                                          className="rounded-xl border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/5 text-muted-foreground cursor-not-allowed"
+                                          className="h-12 rounded-xl py-3 px-4 border border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/5 text-muted-foreground cursor-not-allowed"
                                         />
                                       </div>
 
@@ -2716,7 +2758,7 @@ export default function AgentDashboard() {
                                           value={profileForm.agent_type}
                                           onValueChange={(val) => setProfileForm({ ...profileForm, agent_type: val ?? "" })}
                                         >
-                                          <SelectTrigger className="rounded-xl border-gray-200 dark:border-white/10 bg-transparent text-navy dark:text-white">
+                                          <SelectTrigger className="h-12 rounded-xl border border-gray-200 dark:border-white/10 bg-transparent text-navy dark:text-white">
                                             <SelectValue placeholder="Select type" />
                                           </SelectTrigger>
                                           <SelectContent>
@@ -2732,7 +2774,7 @@ export default function AgentDashboard() {
                                         <Input
                                           value={profileForm.responseTime}
                                           onChange={(e) => setProfileForm({ ...profileForm, responseTime: e.target.value })}
-                                          className="rounded-xl border-gray-200 dark:border-white/10 bg-transparent text-navy dark:text-white"
+                                          className="h-12 rounded-xl py-3 px-4 border border-gray-200 dark:border-white/10 bg-gray-50/30 dark:bg-white/5 text-navy dark:text-white"
                                           placeholder="e.g. Replies within 5 mins"
                                         />
                                       </div>
@@ -2792,7 +2834,7 @@ export default function AgentDashboard() {
                                           <Input
                                             value={user?.email || "dubem@example.com"}
                                             disabled
-                                            className="rounded-xl border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/5 text-muted-foreground cursor-not-allowed"
+                                            className="h-12 rounded-xl py-3 px-4 border border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/5 text-muted-foreground cursor-not-allowed"
                                           />
                                         </div>
 
@@ -2805,7 +2847,7 @@ export default function AgentDashboard() {
                                             placeholder="Enter new email address"
                                             value={changeEmailForm.newEmail}
                                             onChange={(e) => setChangeEmailForm({ ...changeEmailForm, newEmail: e.target.value })}
-                                            className="rounded-xl border-gray-200 dark:border-white/10 bg-transparent text-navy dark:text-white"
+                                            className="h-12 rounded-xl py-3 px-4 border border-gray-200 dark:border-white/10 bg-gray-50/30 dark:bg-white/5 text-navy dark:text-white"
                                           />
                                         </div>
 
@@ -2818,7 +2860,7 @@ export default function AgentDashboard() {
                                             placeholder="Enter your current password"
                                             value={changeEmailForm.password}
                                             onChange={(e) => setChangeEmailForm({ ...changeEmailForm, password: e.target.value })}
-                                            className="rounded-xl border-gray-200 dark:border-white/10 bg-transparent text-navy dark:text-white"
+                                            className="h-12 rounded-xl py-3 px-4 border border-gray-200 dark:border-white/10 bg-gray-50/30 dark:bg-white/5 text-navy dark:text-white"
                                           />
                                         </div>
 
@@ -2878,7 +2920,7 @@ export default function AgentDashboard() {
                                             placeholder="Enter current password"
                                             value={passwordForm.current}
                                             onChange={(e) => setPasswordForm({ ...passwordForm, current: e.target.value })}
-                                            className="rounded-xl border-gray-200 dark:border-white/10 bg-transparent text-navy dark:text-white"
+                                            className="h-12 rounded-xl py-3 px-4 border border-gray-200 dark:border-white/10 bg-gray-50/30 dark:bg-white/5 text-navy dark:text-white"
                                           />
                                         </div>
                                         <div className="space-y-1.5">
@@ -2889,7 +2931,7 @@ export default function AgentDashboard() {
                                             placeholder="Enter new password (min. 6 characters)"
                                             value={passwordForm.new}
                                             onChange={(e) => setPasswordForm({ ...passwordForm, new: e.target.value })}
-                                            className="rounded-xl border-gray-200 dark:border-white/10 bg-transparent text-navy dark:text-white"
+                                            className="h-12 rounded-xl py-3 px-4 border border-gray-200 dark:border-white/10 bg-gray-50/30 dark:bg-white/5 text-navy dark:text-white"
                                           />
                                         </div>
                                         <div className="space-y-1.5">
@@ -2900,7 +2942,7 @@ export default function AgentDashboard() {
                                             placeholder="Confirm new password"
                                             value={passwordForm.confirm}
                                             onChange={(e) => setPasswordForm({ ...passwordForm, confirm: e.target.value })}
-                                            className="rounded-xl border-gray-200 dark:border-white/10 bg-transparent text-navy dark:text-white"
+                                            className="h-12 rounded-xl py-3 px-4 border border-gray-200 dark:border-white/10 bg-gray-50/30 dark:bg-white/5 text-navy dark:text-white"
                                           />
                                         </div>
                                       </div>
@@ -3178,8 +3220,37 @@ export default function AgentDashboard() {
             </Button>
             <Button
               type="button"
-              onClick={() => {
-                if (tempPhoto) {
+              onClick={async () => {
+                if (tempPhoto && selectedDpFile && user) {
+                  const toastId = toast.loading("Uploading picture to Firebase Storage...");
+                  try {
+                    const storageRef = ref(storage, `agents/${user.uid}/profile_picture_${Date.now()}_${selectedDpFile.name}`);
+                    await uploadBytes(storageRef, selectedDpFile);
+                    const downloadUrl = await getDownloadURL(storageRef);
+
+                    // Update Firebase Auth user profile photo URL
+                    await updateProfile(user, { photoURL: downloadUrl });
+
+                    // Update Firestore document
+                    await updateDoc(doc(db, "users", user.uid), {
+                      photoURL: downloadUrl,
+                      photo: downloadUrl
+                    });
+
+                    // Update states
+                    setProfileForm(prev => ({ ...prev, photo: downloadUrl }));
+                    setAgentData(prev => {
+                      const updated = { ...prev, photo: downloadUrl };
+                      localStorage.setItem("agent_data", JSON.stringify(updated));
+                      window.dispatchEvent(new Event("agent-data-updated"));
+                      return updated;
+                    });
+                    toast.success("Profile picture uploaded and updated successfully!", { id: toastId });
+                  } catch (err: any) {
+                    console.error("DP upload error:", err);
+                    toast.error("Failed to upload image. Please try again.", { id: toastId });
+                  }
+                } else if (tempPhoto) {
                   setProfileForm(prev => ({ ...prev, photo: tempPhoto }));
                   setAgentData(prev => {
                     const updated = { ...prev, photo: tempPhoto };
@@ -3187,10 +3258,11 @@ export default function AgentDashboard() {
                     window.dispatchEvent(new Event("agent-data-updated"));
                     return updated;
                   });
-                  toast.success("Profile picture updated successfully!");
+                  toast.success("Profile picture updated locally.");
                 }
                 setIsPhotoModalOpen(false);
                 setTempPhoto(null);
+                setSelectedDpFile(null);
               }}
               className="rounded-xl bg-gold hover:bg-gold/90 text-navy font-bold px-6"
             >

@@ -48,7 +48,6 @@ export function AgentSidebar({
     { id: "overview", label: "Dashboard", icon: LayoutDashboard },
     { id: "listings", label: "My Listings", icon: List },
     { id: "notifications", label: "Notifications", icon: Bell },
-    { id: "settings", label: "Settings", icon: Settings },
   ] as const;
 
   return (
@@ -78,7 +77,7 @@ export function AgentSidebar({
           )}
         </div>
       </SidebarHeader>
-
+ 
       <SidebarContent className="px-3 py-6 bg-white dark:bg-[#0f1d2e] text-navy/80 dark:text-white/80">
         <SidebarMenu className="space-y-1">
           {navItems.map((item) => {
@@ -113,7 +112,7 @@ export function AgentSidebar({
             );
           })}
         </SidebarMenu>
-
+ 
         {state === "expanded" && isApproved && (
           <div className="px-3 mt-8">
             <button 
@@ -126,20 +125,47 @@ export function AgentSidebar({
           </div>
         )}
       </SidebarContent>
-
+ 
       <SidebarFooter className="p-4 border-t border-black/5 dark:border-white/10 bg-white dark:bg-[#0f1d2e] text-navy/80 dark:text-white/80">
-        <SidebarMenu>
+        <SidebarMenu className="space-y-1">
+          {/* Settings tab inside footer */}
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              isActive={activeTab === "settings"}
+              onClick={() => setActiveTab("settings")}
+              className={cn(
+                "w-full flex items-center gap-3 px-3 py-6 rounded-lg transition-all duration-200 group hover:bg-navy/5 hover:text-navy dark:hover:bg-white/5 dark:hover:text-white",
+                activeTab === "settings"
+                  ? "bg-gold/10 text-gold border-l-4 border-gold rounded-l-none"
+                  : "text-navy/70 dark:text-white/70",
+              )}
+            >
+              <Settings
+                className={cn(
+                  "w-5 h-5 transition-colors duration-200",
+                  activeTab === "settings"
+                    ? "text-gold"
+                    : "text-navy/60 group-hover:text-navy dark:text-white/60 dark:group-hover:text-white",
+                )}
+              />
+              {state === "expanded" && (
+                <span className="font-semibold text-sm">Settings</span>
+              )}
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+
+          {/* Logout tab */}
           <SidebarMenuItem>
             <SidebarMenuButton 
               onClick={onLogout || (() => {
                 localStorage.removeItem("agent_logged_in");
                 window.location.href = "/";
               })}
-              className="text-navy/70 dark:text-white/70 hover:text-navy hover:dark:text-white hover:bg-navy/5 hover:dark:bg-white/5 px-3 py-6 gap-3 rounded-lg"
+              className="text-rose-600 dark:text-rose-400 hover:text-rose-700 hover:dark:text-rose-300 hover:bg-rose-500/10 hover:dark:bg-rose-500/10 px-3 py-6 gap-3 rounded-lg"
             >
-              <LogOut className="w-5 h-5" />
+              <LogOut className="w-5 h-5 text-rose-600 dark:text-rose-400" />
               {state === "expanded" && (
-                <span className="font-semibold text-sm">Logout</span>
+                <span className="font-semibold text-sm text-rose-600 dark:text-rose-400">Logout</span>
               )}
             </SidebarMenuButton>
           </SidebarMenuItem>

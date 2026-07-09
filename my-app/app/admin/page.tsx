@@ -3,6 +3,8 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
+import { db } from "@/lib/firebase";
+import { doc, updateDoc } from "firebase/firestore";
 import {
   Building2,
   Users,
@@ -2117,7 +2119,7 @@ export default function AdminDashboard() {
   };
 
   // Actions
-  const handleApproveApp = (id: string) => {
+  const handleApproveApp = async (id: string) => {
     setApplications(prev => prev.map(app => app.id === id ? { ...app, status: 'Approved' } : app));
 
     const app = applications.find(a => a.id === id);
@@ -2136,6 +2138,18 @@ export default function AdminDashboard() {
         if (prev.some(a => a.email === app.email)) return prev;
         return [...prev, newAgent];
       });
+
+      // Update Firestore user document
+      const cleanUid = id.replace("app-agent-", "").replace("app-", "");
+      try {
+        await updateDoc(doc(db, "users", cleanUid), {
+          approved: true,
+          verified: true,
+          rejected: false
+        });
+      } catch (err) {
+        console.error("Firestore user approval update error:", err);
+      }
 
       // Update localStorage if it's the registered onboarding agent
       if (id.startsWith('app-agent')) {
@@ -2162,8 +2176,20 @@ export default function AdminDashboard() {
     toast.success("Application approved successfully");
   };
 
-  const handleRejectApp = (id: string) => {
+  const handleRejectApp = async (id: string) => {
     setApplications(prev => prev.map(app => app.id === id ? { ...app, status: 'Rejected' } : app));
+
+    // Update Firestore user document
+    const cleanUid = id.replace("app-agent-", "").replace("app-", "");
+    try {
+      await updateDoc(doc(db, "users", cleanUid), {
+        approved: false,
+        verified: false,
+        rejected: true
+      });
+    } catch (err) {
+      console.error("Firestore user rejection update error:", err);
+    }
 
     // Update localStorage if it's the registered onboarding agent
     if (id.startsWith('app-agent')) {
