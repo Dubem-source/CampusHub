@@ -4,8 +4,9 @@ import React, { useState, useMemo, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
-import { auth, db } from "@/lib/firebase";
+import { auth, db, storage } from "@/lib/firebase";
 import { doc, setDoc, updateDoc, deleteDoc, collection, addDoc, getDocs, query, where } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from "firebase/auth";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -311,6 +312,8 @@ export default function AgentDashboard() {
   const mainRef = useRef<HTMLElement | null>(null);
   const [mounted, setMounted] = useState(false);
   const [overviewLoading, setOverviewLoading] = useState(false);
+  const [ninUploading, setNinUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -604,33 +607,48 @@ export default function AgentDashboard() {
       return;
     }
     
-    // Save to Firestore users document
-    if (user) {
-      try {
+    setNinUploading(true);
+    setUploadError(null);
+
+    try {
+      let finalImageUrl = previewImage;
+
+      // Real Firebase Storage upload if a binary file was selected
+      if (user && selectedFile) {
+        const fileRef = ref(storage, `agents/${user.uid}/${Date.now()}_${selectedFile.name}`);
+        const uploadResult = await uploadBytes(fileRef, selectedFile);
+        finalImageUrl = await getDownloadURL(uploadResult.ref);
+      }
+
+      // Save to Firestore users document
+      if (user) {
         await updateDoc(doc(db, "users", user.uid), {
           ninUploaded: true,
-          ninImage: previewImage,
+          ninImage: finalImageUrl,
           ninImageName: selectedFile?.name || "NIN_document.jpg"
         });
-      } catch (err) {
-        console.error("Firestore upload error:", err);
-        toast.error("Failed to submit verification request. Please try again.");
-        return;
       }
-    }
 
-    setAgentData(prev => {
-      const updated = {
-        ...prev,
-        ninUploaded: true,
-        ninImage: previewImage,
-        ninImageName: selectedFile?.name || "NIN_document.jpg"
-      };
-      localStorage.setItem("agent_data", JSON.stringify(updated));
-      window.dispatchEvent(new Event("agent-data-updated"));
-      return updated;
-    });
-    toast.success("NIN document uploaded successfully! Pending verification.");
+      setAgentData(prev => {
+        const updated = {
+          ...prev,
+          ninUploaded: true,
+          ninImage: finalImageUrl,
+          ninImageName: selectedFile?.name || "NIN_document.jpg"
+        };
+        localStorage.setItem("agent_data", JSON.stringify(updated));
+        window.dispatchEvent(new Event("agent-data-updated"));
+        return updated;
+      });
+      toast.success("NIN document uploaded successfully! Pending verification.");
+    } catch (err: any) {
+      console.error("Firestore/Storage upload error:", err);
+      const errMsg = err.message || "Failed to submit verification request. Please check your internet connection.";
+      setUploadError(errMsg);
+      toast.error("Upload failed. Please see the error details.");
+    } finally {
+      setNinUploading(false);
+    }
   };
 
   const PendingTabAlert = () => (
@@ -1186,217 +1204,65 @@ export default function AgentDashboard() {
                 <>
                   {/* Tab 1: Profile Tab */}
                   {activeTab === "profile" && (
-                    !isApproved ? (
-                      !agentData.ninUploaded ? (
-                        <div className="max-w-xl mx-auto text-left">
-                          <Card className="border-none shadow-lg bg-white dark:bg-[#0f1d2e] rounded-3xl p-6 sm:p-8">
-                            <CardHeader className="p-0 pb-6 border-b border-gray-100 dark:border-white/10 mb-6">
-                              <CardTitle className="text-xl font-bold text-navy dark:text-white">Verify Your Account</CardTitle>
-                              <CardDescription className="text-muted-foreground mt-1">
-                                Complete the remaining onboarding tasks to submit your agent profile for admin review.
-                              </CardDescription>
-                            </CardHeader>
-                            <CardContent className="p-0 space-y-6">
-                              {/* Task List */}
-                              <div className="space-y-4">
-                                {/* Task 1: Email Verified */}
-                                <div className="flex items-center justify-between p-4 rounded-2xl bg-emerald-50/50 dark:bg-emerald-500/5 border border-emerald-500/10">
-                                  <div className="flex items-center gap-3">
-                                    <div className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 text-white">
-                                      <Check className="h-3 w-3" />
-                                    </div>
-                                    <span className="text-sm font-semibold text-navy dark:text-white">Email verified</span>
-                                  </div>
-                                  <Badge className="bg-emerald-500 text-white border-0 text-[10px] font-bold uppercase tracking-wider">Completed</Badge>
-                                </div>
-
-                                {/* Task 2: Phone Verification */}
-                                <div className={cn(
-                                  "flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-2xl border transition-all gap-3",
-                                  agentData.phoneVerified 
-                                    ? "bg-emerald-50/50 dark:bg-emerald-500/5 border-emerald-500/10" 
-                                    : "bg-gray-50/50 dark:bg-white/5 border-black/5 dark:border-white/5"
-                                )}>
-                                  <div className="flex items-center gap-3">
-                                    {agentData.phoneVerified ? (
-                                      <div className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 text-white">
-                                        <Check className="h-3 w-3" />
-                                      </div>
-                                    ) : (
-                                      <div className="h-5 w-5 rounded-full border-2 border-gray-300 dark:border-white/20" />
-                                    )}
-                                    <div className="text-left">
-                                      <span className="text-sm font-semibold text-navy dark:text-white">Verify phone number</span>
-                                      <p className="text-[10px] text-muted-foreground mt-0.5">{agentData.phone}</p>
-                                    </div>
-                                  </div>
-                                  {!agentData.phoneVerified ? (
-                                    <Button
-                                      onClick={handleSendOtp}
-                                      disabled={isSendingOtp}
-                                      className="rounded-xl bg-gold hover:bg-gold/90 text-navy font-bold text-xs px-4 py-2 border-0 shadow-sm cursor-pointer"
-                                    >
-                                      {isSendingOtp ? "Sending..." : "Verify Now"}
-                                    </Button>
-                                  ) : (
-                                    <Badge className="bg-emerald-500 text-white border-0 text-[10px] font-bold uppercase tracking-wider">Completed</Badge>
-                                  )}
-                                </div>
-
-                                {/* Task 3: Image ID Upload */}
-                                <div className={cn(
-                                  "flex flex-col p-4 rounded-2xl border transition-all space-y-4",
-                                  previewImage 
-                                    ? "bg-emerald-50/50 dark:bg-emerald-500/5 border-emerald-500/10" 
-                                    : "bg-gray-50/50 dark:bg-white/5 border-black/5 dark:border-white/5"
-                                )}>
-                                  <div className="flex items-center gap-3">
-                                    {previewImage ? (
-                                      <div className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 text-white">
-                                        <Check className="h-3 w-3" />
-                                      </div>
-                                    ) : (
-                                      <div className="h-5 w-5 rounded-full border-2 border-gray-300 dark:border-white/20" />
-                                    )}
-                                    <span className="text-sm font-semibold text-navy dark:text-white">Upload image ID</span>
-                                  </div>
-
-                                  {/* Upload Area */}
-                                  <div className="border-2 border-dashed border-gray-200 dark:border-white/10 rounded-xl p-6 flex flex-col items-center justify-center bg-gray-50 dark:bg-navy/10 relative overflow-hidden min-h-[160px]">
-                                    {previewImage ? (
-                                      <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 text-white p-4">
-                                        <img src={previewImage} alt="ID Preview" className="h-full w-full object-contain rounded-lg" />
-                                        <button
-                                          type="button"
-                                          onClick={() => {
-                                            setPreviewImage(null);
-                                            setSelectedFile(null);
-                                          }}
-                                          className="absolute top-2 right-2 bg-rose-500 hover:bg-rose-600 text-white rounded-full p-2 cursor-pointer border-0"
-                                        >
-                                          <X className="h-3 w-3" />
-                                        </button>
-                                      </div>
-                                    ) : (
-                                      <div className="flex flex-col items-center text-center">
-                                        <Building2 className="h-6 w-6 text-muted-foreground mb-2" />
-                                        <p className="font-bold text-xs text-navy dark:text-white">Upload your ID image (e.g. Driver License, Voter Card)</p>
-                                        <p className="text-[10px] text-muted-foreground mt-0.5">Supports PNG, JPG up to 5MB</p>
-                                        <label
-                                          htmlFor="id-file-input"
-                                          className="mt-3 px-3 py-1.5 rounded-lg bg-gold text-[#0f1e2d] font-bold text-[10px] hover:scale-105 transition cursor-pointer shadow-sm"
-                                        >
-                                          Select File
-                                        </label>
-                                        <input
-                                          type="file"
-                                          accept="image/*"
-                                          onChange={(e) => {
-                                            const file = e.target.files?.[0];
-                                            if (file) {
-                                              setSelectedFile(file);
-                                              const reader = new FileReader();
-                                              reader.onloadend = () => {
-                                                setPreviewImage(reader.result as string);
-                                              };
-                                              reader.readAsDataURL(file);
-                                            }
-                                          }}
-                                          className="hidden"
-                                          id="id-file-input"
-                                        />
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-
-                              <form onSubmit={handleNINSubmit} className="pt-2">
-                                <Button
-                                  type="submit"
-                                  disabled={!agentData.phoneVerified || !previewImage}
-                                  className="w-full rounded-xl bg-gold hover:bg-gold/90 text-navy font-bold py-6 text-sm cursor-pointer animate-duration-300"
-                                >
-                                  Submit for Verification
-                                </Button>
-                              </form>
-                            </CardContent>
-                          </Card>
-                        </div>
-                      ) : (
-                        /* Verification Pending State */
-                        <div className="max-w-xl mx-auto text-left">
-                          <Card className="border-none shadow-lg bg-[#0f1e2d] text-white rounded-3xl overflow-hidden relative border border-white/10">
-                            <div className="absolute top-0 right-0 w-48 h-48 bg-[#C9952A] opacity-5 blur-[80px] rounded-full -mr-24 -mt-24"></div>
-                            <CardContent className="p-8 relative z-10 flex flex-col items-center text-center">
-                              <div className="p-4 bg-white/10 rounded-full text-gold mb-6 animate-pulse">
-                                <Clock className="h-10 w-10" />
-                              </div>
-                              <h3 className="text-xl font-bold text-white leading-tight mb-3">Verification Underway</h3>
-                              <p className="text-sm text-gray-300 leading-relaxed max-w-sm mb-4">
-                                We’re verifying your details. You’ll be able to list rooms as soon as an admin approves your account. This usually takes a few hours.
-                              </p>
-                              <div className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 mt-2">
-                                <span className="text-xs text-gold font-semibold uppercase tracking-wider block">Important Note</span>
-                                <p className="text-xs text-gray-400 mt-1 leading-relaxed">
-                                  You’ll receive an email when you’ve been approved.
-                                </p>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        </div>
-                      )
-                    ) : (
-                      /* Verified Profile Tab View */
-                      <div className="space-y-8">
-                        <Card className="border-none shadow-lg bg-[#0f1e2d] text-white rounded-none sm:rounded-3xl overflow-hidden relative text-left border-x-0 sm:border border-white/10">
-                          <div className="absolute top-0 right-0 w-48 h-48 bg-[#C9952A] opacity-5 blur-[80px] rounded-full -mr-24 -mt-24"></div>
-                          <CardContent className="p-6 md:p-8 relative z-10">
-                            <div className="flex items-center gap-5">
-                              <div className="relative shrink-0">
-                                <img
-                                  src={profileForm.photo}
-                                  alt={profileForm.full_name}
-                                  className="w-16 h-16 md:w-20 md:h-20 rounded-full border-2 border-gold object-cover bg-white/10"
-                                />
+                    <div className="space-y-8 max-w-xl mx-auto text-left">
+                      {/* ALWAYS RENDER PROFILE PREVIEW CARD AT THE TOP */}
+                      <Card className="border-none shadow-lg bg-[#0f1e2d] text-white rounded-none sm:rounded-3xl overflow-hidden relative text-left border-x-0 sm:border border-white/10">
+                        <div className="absolute top-0 right-0 w-48 h-48 bg-[#C9952A] opacity-5 blur-[80px] rounded-full -mr-24 -mt-24"></div>
+                        <CardContent className="p-6 md:p-8 relative z-10">
+                          <div className="flex items-center gap-5">
+                            <div className="relative shrink-0">
+                              <img
+                                src={profileForm.photo}
+                                alt={profileForm.full_name}
+                                className="w-16 h-16 md:w-20 md:h-20 rounded-full border-2 border-gold object-cover bg-white/10"
+                              />
+                              {isApproved && (
                                 <div className="absolute -bottom-1 -right-1 bg-gold rounded-full p-1 border-2 border-[#0f1e2d]">
                                   <ShieldCheck className="h-3.5 w-3.5 text-[#0f1e2d] fill-[#0f1e2d]" />
                                 </div>
-                              </div>
-                              <div>
-                                <h4 className="text-xl font-bold text-white leading-tight">{profileForm.full_name || "Agent Name"}</h4>
-                                <div className="flex flex-col gap-1 mt-2">
+                              )}
+                            </div>
+                            <div>
+                              <h4 className="text-xl font-bold text-white leading-tight">{profileForm.full_name || "Agent Name"}</h4>
+                              <div className="flex flex-col gap-1 mt-2">
+                                {isApproved ? (
                                   <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-green-500/20 text-green-400 text-[10px] font-bold border border-green-500/30 w-fit uppercase tracking-wider">
                                     Verified Agent
                                   </span>
-                                  <span className="text-gray-400 text-[10px] flex items-center gap-1.5 mt-0.5">
-                                    <span>{profileForm.responseTime}</span>
-                                    <span className="text-gray-500">•</span>
-                                    <span>Joined {agentData.joinedDate || "Oct 2025"}</span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-400 text-[10px] font-bold border border-amber-500/30 w-fit uppercase tracking-wider">
+                                    Vetting Pending
                                   </span>
-                                </div>
+                                )}
+                                <span className="text-gray-400 text-[10px] flex items-center gap-1.5 mt-0.5">
+                                  <span>{profileForm.responseTime}</span>
+                                  <span className="text-gray-500">•</span>
+                                  <span>Joined {agentData.joinedDate || "Oct 2025"}</span>
+                                </span>
                               </div>
                             </div>
+                          </div>
 
-                            <div className="grid grid-cols-4 gap-2 mt-6 pt-6 border-t border-white/10 text-center">
-                              <div>
-                                <p className="text-white font-bold text-base">{agentData.listings.length}</p>
-                                <p className="text-gray-400 text-[9px] uppercase tracking-wider mt-0.5">Rooms</p>
-                              </div>
-                              <div>
-                                <p className="text-white font-bold text-base">{agentData.stats.avg_rating}</p>
-                                <p className="text-gray-400 text-[9px] uppercase tracking-wider mt-0.5">Rating</p>
-                              </div>
-                              <div>
-                                <p className="text-white font-bold text-base">12</p>
-                                <p className="text-gray-400 text-[9px] uppercase tracking-wider mt-0.5">Reviews</p>
-                              </div>
-                              <div>
-                                <p className="text-white font-bold text-base">{agentData.stats.total_views}</p>
-                                <p className="text-gray-400 text-[9px] uppercase tracking-wider mt-0.5">Views</p>
-                              </div>
+                          <div className="grid grid-cols-4 gap-2 mt-6 pt-6 border-t border-white/10 text-center">
+                            <div>
+                              <p className="text-white font-extrabold text-base">{isApproved ? agentData.listings.length : "—"}</p>
+                              <p className="text-gray-400 text-[9px] uppercase tracking-wider mt-0.5">Rooms</p>
                             </div>
+                            <div>
+                              <p className="text-white font-extrabold text-base">{isApproved ? agentData.stats.avg_rating : "—"}</p>
+                              <p className="text-gray-400 text-[9px] uppercase tracking-wider mt-0.5">Rating</p>
+                            </div>
+                            <div>
+                              <p className="text-white font-extrabold text-base">{isApproved ? "12" : "—"}</p>
+                              <p className="text-gray-400 text-[9px] uppercase tracking-wider mt-0.5">Reviews</p>
+                            </div>
+                            <div>
+                              <p className="text-white font-extrabold text-base">{isApproved ? agentData.stats.total_views : "—"}</p>
+                              <p className="text-gray-400 text-[9px] uppercase tracking-wider mt-0.5">Views</p>
+                            </div>
+                          </div>
 
+                          {isApproved && (
                             <div className="mt-6 flex justify-between items-center gap-4">
                               <span className="text-[11px] text-gray-400 flex items-center gap-1.5">
                                 <Info className="h-3.5 w-3.5 text-gold" />
@@ -1428,10 +1294,191 @@ export default function AgentDashboard() {
                                 <span>Share Profile</span>
                               </button>
                             </div>
-                          </CardContent>
-                        </Card>
+                          )}
+                        </CardContent>
+                      </Card>
 
-                        {/* Properties List */}
+                      {/* CONDITIONAL SECTIONS RENDERED BELOW THE CARD */}
+                      {!isApproved ? (
+                        !agentData.ninUploaded ? (
+                          <div className="text-left animate-in fade-in slide-in-from-bottom-4 duration-300">
+                            <Card className="border-none shadow-lg bg-white dark:bg-[#0f1d2e] rounded-3xl p-6 sm:p-8">
+                              <CardHeader className="p-0 pb-6 border-b border-gray-100 dark:border-white/10 mb-6">
+                                <CardTitle className="text-xl font-bold text-navy dark:text-white">Verify Your Account</CardTitle>
+                                <CardDescription className="text-muted-foreground mt-1">
+                                  Complete the remaining onboarding tasks to submit your agent profile for admin review.
+                                </CardDescription>
+                              </CardHeader>
+                              <CardContent className="p-0 space-y-6">
+                                {/* Task List */}
+                                <div className="space-y-4">
+                                  {/* Task 1: Email Verified */}
+                                  <div className="flex items-center justify-between p-4 rounded-2xl bg-emerald-50/50 dark:bg-emerald-500/5 border border-emerald-500/10">
+                                    <div className="flex items-center gap-3">
+                                      <div className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 text-white">
+                                        <Check className="h-3 w-3" />
+                                      </div>
+                                      <span className="text-sm font-semibold text-navy dark:text-white">Email verified</span>
+                                    </div>
+                                    <Badge className="bg-emerald-500 text-white border-0 text-[10px] font-bold uppercase tracking-wider">Completed</Badge>
+                                  </div>
+
+                                  {/* Task 2: Phone Verification */}
+                                  <div className={cn(
+                                    "flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-2xl border transition-all gap-3",
+                                    agentData.phoneVerified 
+                                      ? "bg-emerald-50/50 dark:bg-emerald-500/5 border-emerald-500/10" 
+                                      : "bg-gray-50/50 dark:bg-white/5 border-black/5 dark:border-white/5"
+                                  )}>
+                                    <div className="flex items-center gap-3">
+                                      {agentData.phoneVerified ? (
+                                        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 text-white">
+                                          <Check className="h-3 w-3" />
+                                        </div>
+                                      ) : (
+                                        <div className="h-5 w-5 rounded-full border-2 border-gray-300 dark:border-white/20" />
+                                      )}
+                                      <div className="text-left">
+                                        <span className="text-sm font-semibold text-navy dark:text-white">Verify phone number</span>
+                                        <p className="text-[10px] text-muted-foreground mt-0.5">{agentData.phone}</p>
+                                      </div>
+                                    </div>
+                                    {!agentData.phoneVerified ? (
+                                      <Button
+                                        onClick={handleSendOtp}
+                                        disabled={isSendingOtp}
+                                        className="rounded-xl bg-gold hover:bg-gold/90 text-navy font-bold text-xs px-4 py-2 border-0 shadow-sm cursor-pointer"
+                                      >
+                                        {isSendingOtp ? "Sending..." : "Verify Now"}
+                                      </Button>
+                                    ) : (
+                                      <Badge className="bg-emerald-500 text-white border-0 text-[10px] font-bold uppercase tracking-wider">Completed</Badge>
+                                    )}
+                                  </div>
+
+                                  {/* Task 3: Image ID Upload */}
+                                  <div className={cn(
+                                    "flex flex-col p-4 rounded-2xl border transition-all space-y-4",
+                                    previewImage 
+                                      ? "bg-emerald-50/50 dark:bg-emerald-500/5 border-emerald-500/10" 
+                                      : "bg-gray-50/50 dark:bg-white/5 border-black/5 dark:border-white/5"
+                                  )}>
+                                    <div className="flex items-center gap-3">
+                                      {previewImage ? (
+                                        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 text-white">
+                                          <Check className="h-3 w-3" />
+                                        </div>
+                                      ) : (
+                                        <div className="h-5 w-5 rounded-full border-2 border-gray-300 dark:border-white/20" />
+                                      )}
+                                      <span className="text-sm font-semibold text-navy dark:text-white">Upload image ID</span>
+                                    </div>
+
+                                    {/* Upload Area */}
+                                    <div className="border-2 border-dashed border-gray-200 dark:border-white/10 rounded-xl p-6 flex flex-col items-center justify-center bg-gray-50 dark:bg-navy/10 relative overflow-hidden min-h-[160px]">
+                                      {previewImage ? (
+                                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 text-white p-4">
+                                          <img src={previewImage} alt="ID Preview" className="h-full w-full object-contain rounded-lg" />
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              setPreviewImage(null);
+                                              setSelectedFile(null);
+                                            }}
+                                            className="absolute top-2 right-2 bg-rose-500 hover:bg-rose-600 text-white rounded-full p-2 cursor-pointer border-0"
+                                            disabled={ninUploading}
+                                          >
+                                            <X className="h-3 w-3" />
+                                          </button>
+                                        </div>
+                                      ) : (
+                                        <div className="flex flex-col items-center text-center">
+                                          <Building2 className="h-6 w-6 text-muted-foreground mb-2" />
+                                          <p className="font-bold text-xs text-navy dark:text-white">Upload your ID image (e.g. Driver License, Voter Card)</p>
+                                          <p className="text-[10px] text-muted-foreground mt-0.5">Supports PNG, JPG up to 5MB</p>
+                                          <label
+                                            htmlFor="id-file-input"
+                                            className="mt-3 px-3 py-1.5 rounded-lg bg-gold text-[#0f1e2d] font-bold text-[10px] hover:scale-105 transition cursor-pointer shadow-sm"
+                                          >
+                                            Select File
+                                          </label>
+                                          <input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={(e) => {
+                                              const file = e.target.files?.[0];
+                                              if (file) {
+                                                setSelectedFile(file);
+                                                const reader = new FileReader();
+                                                reader.onloadend = () => {
+                                                  setPreviewImage(reader.result as string);
+                                                };
+                                                reader.readAsDataURL(file);
+                                              }
+                                            }}
+                                            className="hidden"
+                                            id="id-file-input"
+                                          />
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {uploadError && (
+                                  <div className="p-4 bg-rose-50 dark:bg-rose-500/10 border border-rose-100 dark:border-rose-500/20 text-rose-600 dark:text-rose-400 rounded-2xl text-xs space-y-2 leading-relaxed text-left">
+                                    <span className="font-bold block uppercase tracking-wider text-[10px]">Upload Details Error</span>
+                                    <p>{uploadError}</p>
+                                    <p className="text-[10px] text-rose-500/80">Make sure your Firebase Storage rules permit open writes in test mode.</p>
+                                  </div>
+                                )}
+
+                                <form onSubmit={handleNINSubmit} className="pt-2">
+                                  <Button
+                                    type="submit"
+                                    disabled={!agentData.phoneVerified || !previewImage || ninUploading}
+                                    className="w-full rounded-xl bg-gold hover:bg-gold/90 text-navy font-bold py-6 text-sm cursor-pointer flex items-center justify-center gap-2"
+                                  >
+                                    {ninUploading ? (
+                                      <>
+                                        <svg className="animate-spin h-5 w-5 text-navy" viewBox="0 0 24 24">
+                                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                                        </svg>
+                                        Submitting ID to Firebase...
+                                      </>
+                                    ) : (
+                                      "Submit for Verification"
+                                    )}
+                                  </Button>
+                                </form>
+                              </CardContent>
+                            </Card>
+                          </div>
+                        ) : (
+                          /* Verification Pending State Card */
+                          <div className="text-left animate-in fade-in slide-in-from-bottom-4 duration-300">
+                            <Card className="border-none shadow-lg bg-[#0f1d2e] dark:bg-[#0f1d2e] border border-white/5 rounded-3xl overflow-hidden relative">
+                              <CardContent className="p-8 relative z-10 flex flex-col items-center text-center text-white">
+                                <div className="p-4 bg-white/10 rounded-full text-gold mb-6 animate-pulse">
+                                  <Clock className="h-10 w-10" />
+                                </div>
+                                <h3 className="text-xl font-bold text-white leading-tight mb-3">Verification Underway</h3>
+                                <p className="text-sm text-gray-300 leading-relaxed max-w-sm mb-4">
+                                  We’re verifying your details. You’ll be able to list rooms as soon as an admin approves your account. This usually takes a few hours.
+                                </p>
+                                <div className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 mt-2">
+                                  <span className="text-xs text-gold font-semibold uppercase tracking-wider block">Important Note</span>
+                                  <p className="text-xs text-gray-400 mt-1 leading-relaxed">
+                                    You’ll receive an email when you’ve been approved.
+                                  </p>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          </div>
+                        )
+                      ) : (
+                        /* Verified Agent Properties List (renders below card when verified) */
                         <div className="space-y-4">
                           <div className="flex items-center justify-between px-4 sm:px-0">
                             <h3 className="text-sm font-bold uppercase tracking-widest text-navy/40 dark:text-white/40">My Active Properties</h3>
@@ -1459,8 +1506,8 @@ export default function AgentDashboard() {
                             ))}
                           </div>
                         </div>
-                      </div>
-                    )
+                      )}
+                    </div>
                   )}
 
                   {/* Tab 2: Dashboard Overview */}
