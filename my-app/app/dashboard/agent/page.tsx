@@ -44,6 +44,7 @@ import {
   Shield,
   Palette,
   Monitor,
+  PlusCircle,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import Image from "next/image";
@@ -1677,33 +1678,53 @@ export default function AgentDashboard() {
                         )
                       ) : (
                         /* Verified Agent Properties List (renders below card when verified) */
-                        <div className="space-y-4">
-                          <div className="flex items-center justify-between px-4 sm:px-0">
-                            <h3 className="text-sm font-bold uppercase tracking-widest text-navy/40 dark:text-white/40">My Active Properties</h3>
-                            <Badge variant="outline" className="bg-[#f7efe0] dark:bg-white/5 border-gold/20 text-gold">{agentData.listings.length} Listed</Badge>
-                          </div>
-
-                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6 px-4 sm:px-0">
-                            {agentData.listings.map((listing) => (
-                              <div key={listing.id} className="h-full cursor-pointer text-left" onClick={() => {
-                                setSelectedRoomForDetail(listing);
-                                setActiveTab("view-listing");
-                              }}>
-                                <LodgeCard
-                                  name={listing.building_name}
-                                  area={`${listing.area} · ${listing.landmark}`}
-                                  price={formatNaira(listing.price)}
-                                  badge={listing.availability === "available" ? "Available now" : listing.availability === "pending" ? "Pending" : "Rented"}
-                                  photo={listing.photos[0]}
-                                  href="#"
-                                  availability={listing.availability === "available" ? "Available now" : listing.availability === "pending" ? "Pending" : "Rented"}
-                                  roomType={listing.room_type}
-                                  hideHeart={true}
-                                />
+                        agentData.listings.length === 0 ? (
+                          <div className="text-left animate-in fade-in slide-in-from-bottom-4 duration-300 px-4 sm:px-0">
+                            <Card className="border-none shadow-lg bg-white dark:bg-[#0f1d2e] border border-black/5 dark:border-white/10 rounded-3xl p-8 flex flex-col items-center text-center">
+                              <div className="p-4 bg-gold/10 rounded-full text-gold mb-4 flex items-center justify-center">
+                                <PlusCircle className="h-10 w-10 stroke-[1.5]" />
                               </div>
-                            ))}
+                              <h3 className="text-lg font-bold text-navy dark:text-white leading-tight">You haven’t added any rooms yet.</h3>
+                              <p className="text-xs text-muted-foreground mt-2 leading-relaxed max-w-sm">
+                                Start listing your available rooms to reach thousands of FUTO students.
+                              </p>
+                              <Button
+                                onClick={() => setActiveTab("add-listing")}
+                                className="mt-6 rounded-xl bg-gold hover:bg-gold/90 text-navy font-bold text-sm px-6 py-3.5 border-0 shadow-md cursor-pointer transition-all hover:scale-[1.02]"
+                              >
+                                Add New Listing
+                              </Button>
+                            </Card>
                           </div>
-                        </div>
+                        ) : (
+                          <div className="space-y-4">
+                            <div className="flex items-center justify-between px-4 sm:px-0">
+                              <h3 className="text-sm font-bold uppercase tracking-widest text-navy/40 dark:text-white/40">My Active Properties</h3>
+                              <Badge variant="outline" className="bg-[#f7efe0] dark:bg-white/5 border-gold/20 text-gold">{agentData.listings.length} Listed</Badge>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6 px-4 sm:px-0">
+                              {agentData.listings.map((listing) => (
+                                <div key={listing.id} className="h-full cursor-pointer text-left" onClick={() => {
+                                  setSelectedRoomForDetail(listing);
+                                  setActiveTab("view-listing");
+                                }}>
+                                  <LodgeCard
+                                    name={listing.building_name}
+                                    area={`${listing.area} · ${listing.landmark}`}
+                                    price={formatNaira(listing.price)}
+                                    badge={listing.availability === "available" ? "Available now" : listing.availability === "pending" ? "Pending" : "Rented"}
+                                    photo={listing.photos[0]}
+                                    href="#"
+                                    availability={listing.availability === "available" ? "Available now" : listing.availability === "pending" ? "Pending" : "Rented"}
+                                    roomType={listing.room_type}
+                                    hideHeart={true}
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )
                       )}
                     </div>
                   )}
@@ -1805,8 +1826,8 @@ export default function AgentDashboard() {
                           <div>
                             <p className="text-muted-foreground text-sm">Edit, update status, or remove your property listings.</p>
                           </div>
-                          <Button onClick={() => setActiveTab("add-listing")} className="rounded-xl bg-gold hover:bg-gold/90 text-navy font-bold gap-2">
-                            <Plus className="h-4 w-4" /> Add New Room
+                          <Button onClick={() => setActiveTab("add-listing")} className="h-12 px-6 rounded-xl bg-gold hover:bg-gold/90 text-navy font-extrabold shadow-md flex items-center justify-center gap-2 border-0 cursor-pointer">
+                            <Plus className="h-4.5 w-4.5 stroke-[3]" /> Add New Room
                           </Button>
                         </div>
                           {listingsLoading ? (
@@ -1847,108 +1868,65 @@ export default function AgentDashboard() {
                             </div>
                           </div>
                         ) : (
-                          <>
-                            {/* Desktop Table View */}
-                            <div className="hidden md:block bg-white dark:bg-[#0f1d2e] rounded-[2rem] border border-black/5 dark:border-white/5 shadow-sm overflow-hidden">
-                              <table className="w-full text-left">
-                                <thead>
-                                  <tr className="border-b border-gray-100 dark:border-white/10 bg-gray-50/50 dark:bg-white/5">
-                                    <th className="px-6 py-5 text-xs font-bold uppercase tracking-widest text-navy/40 dark:text-white/40">Listing Info</th>
-                                    <th className="px-6 py-5 text-xs font-bold uppercase tracking-widest text-navy/40 dark:text-white/40">Area</th>
-                                    <th className="px-6 py-5 text-xs font-bold uppercase tracking-widest text-navy/40 dark:text-white/40">First Payment</th>
-                                    <th className="px-6 py-5 text-xs font-bold uppercase tracking-widest text-navy/40 dark:text-white/40">To Pay</th>
-                                    <th className="px-6 py-5 text-xs font-bold uppercase tracking-widest text-navy/40 dark:text-white/40">Availability</th>
-                                    <th className="px-6 py-5 text-xs font-bold uppercase tracking-widest text-navy/40 dark:text-white/40 text-right">Actions</th>
-                                  </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-50 dark:divide-white/5">
-                                  {agentData.listings.map((listing) => (
-                                    <tr
-                                      key={listing.id}
-                                      className="hover:bg-gray-50/80 dark:hover:bg-white/5 transition group"
-                                    >
-                                      <td className="px-6 py-5">
-                                        <div className="flex items-center gap-4">
-                                          <div className="h-12 w-12 rounded-xl bg-gray-100 dark:bg-white/5 overflow-hidden">
-                                            <img src={listing.photos[0]} alt="" className="h-full w-full object-cover" />
-                                          </div>
-                                          <div className="text-left">
-                                            <h4 className="font-bold text-navy dark:text-white text-sm">{listing.building_name}</h4>
-                                            <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mt-0.5">{listing.room_type}</p>
-                                          </div>
-                                        </div>
-                                      </td>
-                                      <td className="px-6 py-5 text-navy dark:text-gray-200 text-sm font-semibold">{listing.area}</td>
-                                      <td className="px-6 py-5 text-navy dark:text-white font-bold text-sm">₦{listing.price.toLocaleString()}</td>
-                                      <td className="px-6 py-5 text-navy/70 dark:text-gray-300 font-semibold text-sm">₦{listing.entryPrice?.toLocaleString()}/yr</td>
-                                      <td className="px-6 py-5">
-                                        <Select
-                                          defaultValue={listing.availability}
-                                          onValueChange={(val) => handleUpdateAvailability(listing.id, val as Availability)}
-                                        >
-                                          <SelectTrigger className="h-8 border-none bg-transparent p-0 focus:ring-0 w-fit">
-                                            <AvailabilityBadge status={listing.availability} />
-                                          </SelectTrigger>
-                                          <SelectContent>
-                                            <SelectItem value="available">Available</SelectItem>
-                                            <SelectItem value="pending">Pending</SelectItem>
-                                            <SelectItem value="rented">Rented</SelectItem>
-                                          </SelectContent>
-                                        </Select>
-                                      </td>
-                                      <td className="px-6 py-5">
-                                        <div className="flex gap-2 justify-end">
-                                          <Button
-                                            variant="outline"
-                                            size="icon"
-                                            onClick={() => handleEditClick(listing)}
-                                            className="h-8 w-8 rounded-lg border-navy/10 dark:border-white/10 hover:bg-navy/5 dark:hover:bg-white/5"
-                                          >
-                                            <Edit size={14} className="text-gray-500 dark:text-gray-400" />
-                                          </Button>
-                                          <Button
-                                            variant="outline"
-                                            size="icon"
-                                            onClick={() => handleDeleteListing(listing.id)}
-                                            className="h-8 w-8 rounded-lg border-rose-100 hover:bg-rose-50 dark:border-rose-950/30"
-                                          >
-                                            <Trash2 size={14} className="text-rose-500" />
-                                          </Button>
-                                        </div>
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
+                          agentData.listings.length === 0 ? (
+                            <div className="text-left animate-in fade-in slide-in-from-bottom-4 duration-300">
+                              <Card className="border-none shadow-lg bg-white dark:bg-[#0f1d2e] border border-black/5 dark:border-white/10 rounded-3xl p-12 flex flex-col items-center text-center">
+                                <div className="p-4 bg-gold/10 rounded-full text-gold mb-4 flex items-center justify-center">
+                                  <PlusCircle className="h-12 w-12 stroke-[1.5]" />
+                                </div>
+                                <h3 className="text-lg font-bold text-navy dark:text-white leading-tight">You haven’t added any rooms yet.</h3>
+                                <p className="text-xs text-muted-foreground mt-2 leading-relaxed max-w-sm">
+                                  Start listing your available rooms to reach thousands of FUTO students.
+                                </p>
+                                <Button
+                                  onClick={() => setActiveTab("add-listing")}
+                                  className="mt-6 h-12 px-6 rounded-xl bg-gold hover:bg-gold/90 text-navy font-extrabold text-sm border-0 shadow-md cursor-pointer transition-all hover:scale-[1.02]"
+                                >
+                                  Add New Listing
+                                </Button>
+                              </Card>
                             </div>
-
-                            {/* Mobile Card View */}
-                            <div className="md:hidden space-y-4 px-0">
-                              {agentData.listings.map((listing) => (
-                                <Card key={listing.id} className="border-none shadow-sm overflow-hidden bg-white dark:bg-[#0f1d2e] rounded-none sm:rounded-2xl border-x-0 sm:border">
-                                  <CardContent className="p-3">
-                                    <div className="flex items-center gap-3">
-                                      <div className="h-24 w-24 rounded-2xl overflow-hidden relative shrink-0">
-                                        <img src={listing.photos[0]} alt="" className="h-full w-full object-cover" />
-                                      </div>
-                                      <div className="flex-grow min-w-0 flex flex-col justify-between h-24 text-left">
-                                        <div>
-                                          <div className="flex justify-between items-start gap-2">
-                                            <h3 className="font-bold text-navy dark:text-white leading-tight text-sm truncate">{listing.room_type}</h3>
-                                            <div className="text-right shrink-0">
-                                              <p className="text-xs font-bold text-navy dark:text-white">FP: ₦{(listing.price / 1000).toFixed(0)}k</p>
-                                              <p className="text-[10px] text-gold font-bold">To Pay: ₦{((listing.entryPrice || 0) / 1000).toFixed(0)}k/yr</p>
+                          ) : (
+                            <>
+                              {/* Desktop Table View */}
+                              <div className="hidden md:block bg-white dark:bg-[#0f1d2e] rounded-[2rem] border border-black/5 dark:border-white/5 shadow-sm overflow-hidden">
+                                <table className="w-full text-left">
+                                  <thead>
+                                    <tr className="border-b border-gray-100 dark:border-white/10 bg-gray-50/50 dark:bg-white/5">
+                                      <th className="px-6 py-5 text-xs font-bold uppercase tracking-widest text-navy/40 dark:text-white/40">Listing Info</th>
+                                      <th className="px-6 py-5 text-xs font-bold uppercase tracking-widest text-navy/40 dark:text-white/40">Area</th>
+                                      <th className="px-6 py-5 text-xs font-bold uppercase tracking-widest text-navy/40 dark:text-white/40">First Payment</th>
+                                      <th className="px-6 py-5 text-xs font-bold uppercase tracking-widest text-navy/40 dark:text-white/40">To Pay</th>
+                                      <th className="px-6 py-5 text-xs font-bold uppercase tracking-widest text-navy/40 dark:text-white/40">Availability</th>
+                                      <th className="px-6 py-5 text-xs font-bold uppercase tracking-widest text-navy/40 dark:text-white/40 text-right">Actions</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-gray-50 dark:divide-white/5">
+                                    {agentData.listings.map((listing) => (
+                                      <tr
+                                        key={listing.id}
+                                        className="hover:bg-gray-50/80 dark:hover:bg-white/5 transition group"
+                                      >
+                                        <td className="px-6 py-5">
+                                          <div className="flex items-center gap-4">
+                                            <div className="h-12 w-12 rounded-xl bg-gray-100 dark:bg-white/5 overflow-hidden">
+                                              <img src={listing.photos[0]} alt="" className="h-full w-full object-cover" />
+                                            </div>
+                                            <div className="text-left">
+                                              <h4 className="font-bold text-navy dark:text-white text-sm">{listing.building_name}</h4>
+                                              <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mt-0.5">{listing.room_type}</p>
                                             </div>
                                           </div>
-                                          <p className="text-xs text-muted-foreground mt-0.5 truncate">{listing.building_name}</p>
-                                          <p className="text-[10px] text-muted-foreground/80 mt-0.5 truncate">{listing.area} · {listing.landmark}</p>
-                                        </div>
-                                        <div className="flex items-center justify-between mt-1">
+                                        </td>
+                                        <td className="px-6 py-5 text-navy dark:text-gray-200 text-sm font-semibold">{listing.area}</td>
+                                        <td className="px-6 py-5 text-navy dark:text-white font-bold text-sm">₦{listing.price.toLocaleString()}</td>
+                                        <td className="px-6 py-5 text-navy/70 dark:text-gray-300 font-semibold text-sm">₦{listing.entryPrice?.toLocaleString()}/yr</td>
+                                        <td className="px-6 py-5">
                                           <Select
                                             defaultValue={listing.availability}
                                             onValueChange={(val) => handleUpdateAvailability(listing.id, val as Availability)}
                                           >
-                                            <SelectTrigger className="h-7 border-none bg-transparent p-0 focus:ring-0 w-fit">
+                                            <SelectTrigger className="h-8 border-none bg-transparent p-0 focus:ring-0 w-fit">
                                               <AvailabilityBadge status={listing.availability} />
                                             </SelectTrigger>
                                             <SelectContent>
@@ -1957,22 +1935,85 @@ export default function AgentDashboard() {
                                               <SelectItem value="rented">Rented</SelectItem>
                                             </SelectContent>
                                           </Select>
-                                          <div className="flex gap-1 shrink-0">
-                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-navy dark:text-white hover:bg-navy/5" onClick={() => handleEditClick(listing)}>
-                                              <Edit className="h-3.5 w-3.5" />
+                                        </td>
+                                        <td className="px-6 py-5">
+                                          <div className="flex gap-2 justify-end">
+                                            <Button
+                                              variant="outline"
+                                              size="icon"
+                                              onClick={() => handleEditClick(listing)}
+                                              className="h-8 w-8 rounded-lg border-navy/10 dark:border-white/10 hover:bg-navy/5 dark:hover:bg-white/5"
+                                            >
+                                              <Edit size={14} className="text-gray-500 dark:text-gray-400" />
                                             </Button>
-                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-rose-500 hover:bg-rose-50" onClick={() => handleDeleteListing(listing.id)}>
-                                              <Trash2 className="h-3.5 w-3.5" />
+                                            <Button
+                                              variant="outline"
+                                              size="icon"
+                                              onClick={() => handleDeleteListing(listing.id)}
+                                              className="h-8 w-8 rounded-lg border-rose-100 hover:bg-rose-50 dark:border-rose-950/30"
+                                            >
+                                              <Trash2 size={14} className="text-rose-500" />
                                             </Button>
+                                          </div>
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+
+                              {/* Mobile Card View */}
+                              <div className="md:hidden space-y-4 px-0">
+                                {agentData.listings.map((listing) => (
+                                  <Card key={listing.id} className="border-none shadow-sm overflow-hidden bg-white dark:bg-[#0f1d2e] rounded-none sm:rounded-2xl border-x-0 sm:border">
+                                    <CardContent className="p-3">
+                                      <div className="flex items-center gap-3">
+                                        <div className="h-24 w-24 rounded-2xl overflow-hidden relative shrink-0">
+                                          <img src={listing.photos[0]} alt="" className="h-full w-full object-cover" />
+                                        </div>
+                                        <div className="flex-grow min-w-0 flex flex-col justify-between h-24 text-left">
+                                          <div>
+                                            <div className="flex justify-between items-start gap-2">
+                                              <h3 className="font-bold text-navy dark:text-white leading-tight text-sm truncate">{listing.room_type}</h3>
+                                              <div className="text-right shrink-0">
+                                                <p className="text-xs font-bold text-navy dark:text-white">FP: ₦{(listing.price / 1000).toFixed(0)}k</p>
+                                                <p className="text-[10px] text-gold font-bold">To Pay: ₦{((listing.entryPrice || 0) / 1000).toFixed(0)}k/yr</p>
+                                              </div>
+                                            </div>
+                                            <p className="text-xs text-muted-foreground mt-0.5 truncate">{listing.building_name}</p>
+                                            <p className="text-[10px] text-muted-foreground/80 mt-0.5 truncate">{listing.area} · {listing.landmark}</p>
+                                          </div>
+                                          <div className="flex items-center justify-between mt-1">
+                                            <Select
+                                              defaultValue={listing.availability}
+                                              onValueChange={(val) => handleUpdateAvailability(listing.id, val as Availability)}
+                                            >
+                                              <SelectTrigger className="h-7 border-none bg-transparent p-0 focus:ring-0 w-fit">
+                                                <AvailabilityBadge status={listing.availability} />
+                                              </SelectTrigger>
+                                              <SelectContent>
+                                                <SelectItem value="available">Available</SelectItem>
+                                                <SelectItem value="pending">Pending</SelectItem>
+                                                <SelectItem value="rented">Rented</SelectItem>
+                                              </SelectContent>
+                                            </Select>
+                                            <div className="flex gap-1 shrink-0">
+                                              <Button variant="ghost" size="icon" className="h-8 w-8 text-navy dark:text-white hover:bg-navy/5" onClick={() => handleEditClick(listing)}>
+                                                <Edit className="h-3.5 w-3.5" />
+                                              </Button>
+                                              <Button variant="ghost" size="icon" className="h-8 w-8 text-rose-500 hover:bg-rose-50" onClick={() => handleDeleteListing(listing.id)}>
+                                                <Trash2 className="h-3.5 w-3.5" />
+                                              </Button>
+                                            </div>
                                           </div>
                                         </div>
                                       </div>
-                                    </div>
-                                  </CardContent>
-                                </Card>
-                              ))}
-                            </div>
-                          </>
+                                    </CardContent>
+                                  </Card>
+                                ))}
+                              </div>
+                            </>
+                          )
                         )}
                       </div>
                     )
@@ -2007,12 +2048,12 @@ export default function AgentDashboard() {
                                 {/* Basic Info */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                   <div className="space-y-2">
-                                    <Label className="text-xs font-bold uppercase tracking-widest text-navy/40 dark:text-white/40">Room Type</Label>
+                                    <Label className="text-xs font-extrabold uppercase tracking-wider text-navy/70 dark:text-white/70">Room Type</Label>
                                     <Select
                                       value={editingListing.room_type}
                                       onValueChange={(val) => setEditingListing({ ...editingListing, room_type: val ?? "" })}
                                     >
-                                      <SelectTrigger className="rounded-xl border-gray-200 dark:border-white/10 bg-transparent text-navy dark:text-white">
+                                      <SelectTrigger className="h-12 px-4 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50/30 dark:bg-white/5 text-navy dark:text-white font-semibold">
                                         <SelectValue placeholder="Select type" />
                                       </SelectTrigger>
                                       <SelectContent>
@@ -2023,22 +2064,22 @@ export default function AgentDashboard() {
                                     </Select>
                                   </div>
                                   <div className="space-y-2">
-                                    <Label className="text-xs font-bold uppercase tracking-widest text-navy/40 dark:text-white/40">First Payment (₦)</Label>
+                                    <Label className="text-xs font-extrabold uppercase tracking-wider text-navy/70 dark:text-white/70">First Payment (₦)</Label>
                                     <Input
                                       type="number"
                                       value={editingListing.price}
                                       onChange={(e) => setEditingListing({ ...editingListing, price: parseInt(e.target.value) || 0 })}
-                                      className="rounded-xl border-gray-200 dark:border-white/10 bg-transparent text-navy dark:text-white"
+                                      className="h-12 px-4 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50/30 dark:bg-white/5 text-navy dark:text-white font-semibold"
                                     />
                                     <p className="text-[10px] text-muted-foreground">The initial amount a student pays (including security, caution fee, etc.)</p>
                                   </div>
                                   <div className="space-y-2">
-                                    <Label className="text-xs font-bold uppercase tracking-widest text-navy/40 dark:text-white/40">To Pay (₦)</Label>
+                                    <Label className="text-xs font-extrabold uppercase tracking-wider text-navy/70 dark:text-white/70">To Pay (₦)</Label>
                                     <Input
                                       type="number"
                                       value={editingListing.entryPrice || ""}
                                       onChange={(e) => setEditingListing({ ...editingListing, entryPrice: parseInt(e.target.value) || 0 })}
-                                      className="rounded-xl border-gray-200 dark:border-white/10 bg-transparent text-navy dark:text-white"
+                                      className="h-12 px-4 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50/30 dark:bg-white/5 text-navy dark:text-white font-semibold"
                                       placeholder="e.g. 100000"
                                     />
                                   </div>
@@ -2046,46 +2087,46 @@ export default function AgentDashboard() {
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                   <div className="space-y-2">
-                                    <Label className="text-xs font-bold uppercase tracking-widest text-navy/40 dark:text-white/40">Area</Label>
+                                    <Label className="text-xs font-extrabold uppercase tracking-wider text-navy/70 dark:text-white/70">Area</Label>
                                     <Input
                                       value={editingListing.area}
                                       onChange={(e) => setEditingListing({ ...editingListing, area: e.target.value })}
-                                      className="rounded-xl border-gray-200 dark:border-white/10 bg-transparent text-navy dark:text-white"
+                                      className="h-12 px-4 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50/30 dark:bg-white/5 text-navy dark:text-white font-semibold"
                                     />
                                   </div>
                                   <div className="space-y-2">
-                                    <Label className="text-xs font-bold uppercase tracking-widest text-navy/40 dark:text-white/40">Lodge/Building Name</Label>
+                                    <Label className="text-xs font-extrabold uppercase tracking-wider text-navy/70 dark:text-white/70">Lodge/Building Name</Label>
                                     <Input
                                       value={editingListing.building_name}
                                       onChange={(e) => setEditingListing({ ...editingListing, building_name: e.target.value })}
-                                      className="rounded-xl border-gray-200 dark:border-white/10 bg-transparent text-navy dark:text-white"
+                                      className="h-12 px-4 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50/30 dark:bg-white/5 text-navy dark:text-white font-semibold"
                                     />
                                   </div>
                                 </div>
 
                                 <div className="space-y-2">
-                                  <Label className="text-xs font-bold uppercase tracking-widest text-navy/40 dark:text-white/40">Landmark</Label>
+                                  <Label className="text-xs font-extrabold uppercase tracking-wider text-navy/70 dark:text-white/70">Landmark</Label>
                                   <Input
                                     value={editingListing.landmark}
                                     onChange={(e) => setEditingListing({ ...editingListing, landmark: e.target.value })}
-                                    className="rounded-xl border-gray-200 dark:border-white/10 bg-transparent text-navy dark:text-white"
+                                    className="h-12 px-4 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50/30 dark:bg-white/5 text-navy dark:text-white font-semibold"
                                     placeholder="e.g. Near FUTO main gate"
                                   />
                                 </div>
 
                                 <div className="space-y-2">
-                                  <Label className="text-xs font-bold uppercase tracking-widest text-navy/40 dark:text-white/40">Description</Label>
+                                  <Label className="text-xs font-extrabold uppercase tracking-wider text-navy/70 dark:text-white/70">Description</Label>
                                   <Textarea
                                     value={editingListing.description}
                                     onChange={(e) => setEditingListing({ ...editingListing, description: e.target.value })}
-                                    className="rounded-xl border-gray-200 dark:border-white/10 bg-transparent text-navy dark:text-white min-h-[100px]"
+                                    className="py-3 px-4 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50/30 dark:bg-white/5 text-navy dark:text-white font-semibold min-h-[100px]"
                                     placeholder="Tell students more about the room..."
                                   />
                                 </div>
 
                                 {/* Amenities */}
                                 <div className="space-y-3">
-                                  <Label className="text-xs font-bold uppercase tracking-widest text-navy/40 dark:text-white/40">Amenities</Label>
+                                  <Label className="text-xs font-extrabold uppercase tracking-wider text-navy/70 dark:text-white/70">Amenities</Label>
                                   <div className="flex flex-wrap gap-2">
                                     {AMENITY_OPTIONS.map((amenity) => {
                                       const active = editingListing.amenities.includes(amenity);
@@ -2110,7 +2151,7 @@ export default function AgentDashboard() {
 
                                 {/* Photos */}
                                 <div className="space-y-3">
-                                  <Label className="text-xs font-bold uppercase tracking-widest text-navy/40 dark:text-white/40">Photos</Label>
+                                  <Label className="text-xs font-extrabold uppercase tracking-wider text-navy/70 dark:text-white/70">Photos</Label>
                                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                                     {editingListing.photos.map((photo, i) => (
                                       <div key={i} className="aspect-square rounded-xl bg-gray-100 overflow-hidden relative group">
@@ -2154,13 +2195,13 @@ export default function AgentDashboard() {
                                   type="button"
                                   variant="ghost"
                                   onClick={handleGoBackToListings}
-                                  className="rounded-xl font-bold text-gray-500"
+                                  className="h-12 px-6 rounded-xl font-bold text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 cursor-pointer border-0"
                                 >
                                   Cancel
                                 </Button>
                                 <Button
                                   type="submit"
-                                  className="rounded-xl bg-gold hover:bg-gold/90 text-navy font-bold px-6 sm:px-8"
+                                  className="h-12 px-8 rounded-xl bg-gold hover:bg-gold/90 text-navy font-extrabold shadow-md border-0 cursor-pointer"
                                 >
                                   Save Changes
                                 </Button>
@@ -2203,22 +2244,22 @@ export default function AgentDashboard() {
 
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-2">
-                                  <Label htmlFor="new_building_name" className="text-xs font-bold uppercase tracking-widest text-navy/40 dark:text-white/40">Lodge/Building Name</Label>
+                                  <Label htmlFor="new_building_name" className="text-xs font-extrabold uppercase tracking-wider text-navy/70 dark:text-white/70">Lodge/Building Name</Label>
                                   <Input
                                     id="new_building_name"
                                     placeholder="e.g. Eziobodo Student Haven"
                                     value={newListingForm.building_name}
                                     onChange={(e) => setNewListingForm({ ...newListingForm, building_name: e.target.value })}
-                                    className="rounded-xl border-gray-200 dark:border-white/10 bg-transparent text-navy dark:text-white focus:border-gold focus:ring-gold"
+                                    className="h-12 px-4 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50/30 dark:bg-white/5 text-navy dark:text-white font-semibold focus:border-gold focus:ring-gold"
                                   />
                                 </div>
                                 <div className="space-y-2">
-                                  <Label htmlFor="new_room_type" className="text-xs font-bold uppercase tracking-widest text-navy/40 dark:text-white/40">Room Type</Label>
+                                  <Label htmlFor="new_room_type" className="text-xs font-extrabold uppercase tracking-wider text-navy/70 dark:text-white/70">Room Type</Label>
                                   <Select
                                     value={newListingForm.room_type}
                                     onValueChange={(val) => setNewListingForm({ ...newListingForm, room_type: val ?? "Self-contain" })}
                                   >
-                                    <SelectTrigger id="new_room_type" className="rounded-xl border-gray-200 dark:border-white/10 bg-transparent text-navy dark:text-white">
+                                    <SelectTrigger id="new_room_type" className="h-12 px-4 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50/30 dark:bg-white/5 text-navy dark:text-white font-semibold">
                                       <SelectValue placeholder="Select room type" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -2232,38 +2273,38 @@ export default function AgentDashboard() {
 
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-2">
-                                  <Label htmlFor="new_price" className="text-xs font-bold uppercase tracking-widest text-navy/40 dark:text-white/40">First Payment (₦)</Label>
+                                  <Label htmlFor="new_price" className="text-xs font-extrabold uppercase tracking-wider text-navy/70 dark:text-white/70">First Payment (₦)</Label>
                                   <Input
                                     id="new_price"
                                     type="number"
                                     placeholder="e.g. 250000"
                                     value={newListingForm.price}
                                     onChange={(e) => setNewListingForm({ ...newListingForm, price: e.target.value })}
-                                    className="rounded-xl border-gray-200 dark:border-white/10 bg-transparent text-navy dark:text-white focus:border-gold focus:ring-gold"
+                                    className="h-12 px-4 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50/30 dark:bg-white/5 text-navy dark:text-white font-semibold focus:border-gold focus:ring-gold"
                                   />
                                   <p className="text-[10px] text-muted-foreground">The initial amount a student pays (including security, caution fee, etc.)</p>
                                 </div>
                                 <div className="space-y-2">
-                                  <Label htmlFor="new_entryPrice" className="text-xs font-bold uppercase tracking-widest text-navy/40 dark:text-white/40">To Pay (₦)</Label>
+                                  <Label htmlFor="new_entryPrice" className="text-xs font-extrabold uppercase tracking-wider text-navy/70 dark:text-white/70">To Pay (₦)</Label>
                                   <Input
                                     id="new_entryPrice"
                                     type="number"
                                     placeholder="e.g. 100000"
                                     value={newListingForm.entryPrice}
                                     onChange={(e) => setNewListingForm({ ...newListingForm, entryPrice: e.target.value })}
-                                    className="rounded-xl border-gray-200 dark:border-white/10 bg-transparent text-navy dark:text-white focus:border-gold focus:ring-gold"
+                                    className="h-12 px-4 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50/30 dark:bg-white/5 text-navy dark:text-white font-semibold focus:border-gold focus:ring-gold"
                                   />
                                 </div>
                               </div>
 
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-2">
-                                  <Label htmlFor="new_area" className="text-xs font-bold uppercase tracking-widest text-navy/40 dark:text-white/40">Lodge Location / Area</Label>
+                                  <Label htmlFor="new_area" className="text-xs font-extrabold uppercase tracking-wider text-navy/70 dark:text-white/70">Lodge Location / Area</Label>
                                   <Select
                                     value={newListingForm.area}
                                     onValueChange={(val) => setNewListingForm({ ...newListingForm, area: val ?? "Eziobodo" })}
                                   >
-                                    <SelectTrigger id="new_area" className="rounded-xl border-gray-200 dark:border-white/10 bg-transparent text-navy dark:text-white">
+                                    <SelectTrigger id="new_area" className="h-12 px-4 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50/30 dark:bg-white/5 text-navy dark:text-white font-semibold">
                                       <SelectValue placeholder="Select location" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -2274,25 +2315,25 @@ export default function AgentDashboard() {
                                   </Select>
                                 </div>
                                 <div className="space-y-2">
-                                  <Label htmlFor="new_landmark" className="text-xs font-bold uppercase tracking-widest text-navy/40 dark:text-white/40">Landmark Description</Label>
+                                  <Label htmlFor="new_landmark" className="text-xs font-extrabold uppercase tracking-wider text-navy/70 dark:text-white/70">Landmark Description</Label>
                                   <Input
                                     id="new_landmark"
                                     placeholder="e.g. Behind the Student Gate"
                                     value={newListingForm.landmark}
                                     onChange={(e) => setNewListingForm({ ...newListingForm, landmark: e.target.value })}
-                                    className="rounded-xl border-gray-200 dark:border-white/10 bg-transparent text-navy dark:text-white focus:border-gold focus:ring-gold"
+                                    className="h-12 px-4 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50/30 dark:bg-white/5 text-navy dark:text-white font-semibold focus:border-gold focus:ring-gold"
                                   />
                                 </div>
                               </div>
 
                               <div className="space-y-2">
-                                <Label htmlFor="new_description" className="text-xs font-bold uppercase tracking-widest text-navy/40 dark:text-white/40">Listing Description</Label>
+                                <Label htmlFor="new_description" className="text-xs font-extrabold uppercase tracking-wider text-navy/70 dark:text-white/70">Listing Description</Label>
                                 <Textarea
                                   id="new_description"
                                   placeholder="Provide details about the lodge, security, electricity access, water, distance from road, flatmate guidelines, etc."
                                   value={newListingForm.description}
                                   onChange={(e) => setNewListingForm({ ...newListingForm, description: e.target.value })}
-                                  className="rounded-xl border-gray-200 dark:border-white/10 bg-transparent text-navy dark:text-white focus:border-gold focus:ring-gold min-h-[120px]"
+                                  className="py-3 px-4 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50/30 dark:bg-white/5 text-navy dark:text-white font-semibold focus:border-gold focus:ring-gold min-h-[120px]"
                                 />
                               </div>
                             </div>
@@ -2300,7 +2341,7 @@ export default function AgentDashboard() {
                             {/* Amenities block */}
                             <div className="space-y-4">
                               <h3 className="text-base font-bold text-navy dark:text-white border-b border-gray-100 dark:border-white/5 pb-2">Amenities</h3>
-                              <Label className="text-xs text-muted-foreground block">Select all building highlights and amenities that apply to this lodge.</Label>
+                              <Label className="text-xs text-navy/70 dark:text-white/70 font-extrabold uppercase tracking-wider block">Select all building highlights and amenities that apply to this lodge.</Label>
                               <div className="flex flex-wrap gap-2.5 pt-1">
                                 {AMENITY_OPTIONS.map((amenity) => {
                                   const active = newListingAmenities.includes(amenity);
@@ -2324,7 +2365,7 @@ export default function AgentDashboard() {
                             {/* Photos upload block */}
                             <div className="space-y-4">
                               <h3 className="text-base font-bold text-navy dark:text-white border-b border-gray-100 dark:border-white/5 pb-2">Photos</h3>
-                              <Label className="text-xs text-muted-foreground block">Upload pictures of the room. First photo will be used as the main preview card.</Label>
+                              <Label className="text-xs text-navy/70 dark:text-white/70 font-extrabold uppercase tracking-wider block">Upload pictures of the room. First photo will be used as the main preview card.</Label>
 
                               <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-4">
                                 {newListingPhotos.map((photo, index) => (
@@ -2370,14 +2411,14 @@ export default function AgentDashboard() {
                                 type="button"
                                 variant="ghost"
                                 onClick={handleGoBackToListings}
-                                className="rounded-xl font-bold text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5"
+                                className="h-12 px-6 rounded-xl font-bold text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 cursor-pointer border-0"
                                 disabled={newListingLoading}
                               >
                                 Cancel
                               </Button>
                               <Button
                                 type="submit"
-                                className="rounded-xl bg-gold hover:bg-gold/90 text-navy font-extrabold px-8 shadow-lg shadow-gold/20 flex items-center gap-2"
+                                className="h-12 px-8 rounded-xl bg-gold hover:bg-gold/90 text-navy font-extrabold shadow-lg shadow-gold/20 flex items-center gap-2 cursor-pointer border-0"
                                 disabled={newListingLoading}
                               >
                                 {newListingLoading ? (
@@ -2587,23 +2628,30 @@ export default function AgentDashboard() {
                             <h2 className="text-lg font-bold text-navy dark:text-white">Recent Inquiries & Notifications</h2>
                           </div>
                           <div className="divide-y divide-gray-100 dark:divide-white/10">
-                            {notifications.map((notif) => (
-                              <div key={notif.id} className="p-6 flex items-start gap-4 hover:bg-gray-50 dark:hover:bg-white/5 transition">
-                                <div className="p-2 bg-green-500/10 text-green-500 rounded-xl">
-                                  <Bell size={20} />
+                            {notifications.length > 0 ? (
+                              notifications.map((notif) => (
+                                <div key={notif.id} className="p-6 flex items-start gap-4 hover:bg-gray-50 dark:hover:bg-white/5 transition">
+                                  <div className="p-2 bg-green-500/10 text-green-500 rounded-xl">
+                                    <Bell size={20} />
+                                  </div>
+                                  <div className="flex-grow">
+                                    <p className="text-sm font-bold text-navy dark:text-white">{notif.text}</p>
+                                    <p className="text-xs text-muted-foreground mt-1">{notif.date}</p>
+                                  </div>
+                                  {!notif.read && (
+                                    <span className="h-2.5 w-2.5 rounded-full bg-[#C9952A]" />
+                                  )}
                                 </div>
-                                <div className="flex-grow">
-                                  <p className="text-sm font-bold text-navy dark:text-white">{notif.text}</p>
-                                  <p className="text-xs text-muted-foreground mt-1">{notif.date}</p>
+                              ))
+                            ) : (
+                              <div className="py-16 px-6 flex flex-col items-center justify-center text-center">
+                                <div className="p-4 bg-gold/10 rounded-full text-gold mb-4 flex items-center justify-center">
+                                  <Bell size={40} className="stroke-[1.5]" />
                                 </div>
-                                {!notif.read && (
-                                  <span className="h-2.5 w-2.5 rounded-full bg-[#C9952A]" />
-                                )}
-                              </div>
-                            ))}
-                            {notifications.length === 0 && (
-                              <div className="py-12 text-center text-muted-foreground">
-                                No inquiries yet.
+                                <h3 className="text-lg font-bold text-navy dark:text-white leading-tight">All caught up!</h3>
+                                <p className="text-xs text-muted-foreground mt-2 leading-relaxed max-w-xs">
+                                  We’ll notify you here when FUTO students make inquiries or review your listings.
+                                </p>
                               </div>
                             )}
                           </div>
@@ -2720,21 +2768,21 @@ export default function AgentDashboard() {
                                     <div className="grid gap-4 sm:grid-cols-2">
                                       {/* Full Name */}
                                       <div className="space-y-1.5">
-                                        <Label className="text-xs font-bold uppercase tracking-wider text-gray-400">Full Name</Label>
+                                        <Label className="text-xs font-extrabold uppercase tracking-wider text-navy/70 dark:text-white/70">Full Name</Label>
                                         <Input
                                           value={profileForm.full_name}
                                           onChange={(e) => setProfileForm({ ...profileForm, full_name: e.target.value })}
-                                          className="h-12 rounded-xl py-3 px-4 border border-gray-200 dark:border-white/10 bg-gray-50/30 dark:bg-white/5 text-navy dark:text-white"
+                                          className="h-12 rounded-xl py-3 px-4 border border-gray-200 dark:border-white/10 bg-gray-50/30 dark:bg-white/5 text-navy dark:text-white font-semibold"
                                         />
                                       </div>
 
                                       {/* Phone Number */}
                                       <div className="space-y-1.5">
-                                        <Label className="text-xs font-bold uppercase tracking-wider text-gray-400">Phone Number</Label>
+                                        <Label className="text-xs font-extrabold uppercase tracking-wider text-navy/70 dark:text-white/70">Phone Number</Label>
                                         <Input
                                           value={profileForm.phone}
                                           onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
-                                          className="h-12 rounded-xl py-3 px-4 border border-gray-200 dark:border-white/10 bg-gray-50/30 dark:bg-white/5 text-navy dark:text-white"
+                                          className="h-12 rounded-xl py-3 px-4 border border-gray-200 dark:border-white/10 bg-gray-50/30 dark:bg-white/5 text-navy dark:text-white font-semibold"
                                         />
                                       </div>
 
@@ -2754,11 +2802,11 @@ export default function AgentDashboard() {
                                       {/* WhatsApp Number */}
                                       {!whatsAppSameAsPhone && (
                                         <div className="space-y-1.5 col-span-full animate-in fade-in duration-200">
-                                          <Label className="text-xs font-bold uppercase tracking-wider text-gray-400">WhatsApp Number</Label>
+                                          <Label className="text-xs font-extrabold uppercase tracking-wider text-navy/70 dark:text-white/70">WhatsApp Number</Label>
                                           <Input
                                             value={profileForm.whatsapp}
                                             onChange={(e) => setProfileForm({ ...profileForm, whatsapp: e.target.value })}
-                                            className="h-12 rounded-xl py-3 px-4 border border-gray-200 dark:border-white/10 bg-gray-50/30 dark:bg-white/5 text-navy dark:text-white"
+                                            className="h-12 rounded-xl py-3 px-4 border border-gray-200 dark:border-white/10 bg-gray-50/30 dark:bg-white/5 text-navy dark:text-white font-semibold"
                                             placeholder="Enter WhatsApp number"
                                           />
                                         </div>
@@ -2766,22 +2814,22 @@ export default function AgentDashboard() {
 
                                       {/* Email address (Read-only) */}
                                       <div className="space-y-1.5 col-span-full">
-                                        <Label className="text-xs font-bold uppercase tracking-wider text-gray-400">Email Address (Read-only)</Label>
+                                        <Label className="text-xs font-extrabold uppercase tracking-wider text-navy/70 dark:text-white/70">Email Address (Read-only)</Label>
                                         <Input
                                           value={profileForm.email}
                                           disabled
-                                          className="h-12 rounded-xl py-3 px-4 border border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/5 text-muted-foreground cursor-not-allowed"
+                                          className="h-12 rounded-xl py-3 px-4 border border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/5 text-muted-foreground cursor-not-allowed font-semibold"
                                         />
                                       </div>
 
                                       {/* Agent Type */}
                                       <div className="space-y-1.5">
-                                        <Label className="text-xs font-bold uppercase tracking-wider text-gray-400">Agent Type</Label>
+                                        <Label className="text-xs font-extrabold uppercase tracking-wider text-navy/70 dark:text-white/70">Agent Type</Label>
                                         <Select
                                           value={profileForm.agent_type}
                                           onValueChange={(val) => setProfileForm({ ...profileForm, agent_type: val ?? "" })}
                                         >
-                                          <SelectTrigger className="h-12 rounded-xl border border-gray-200 dark:border-white/10 bg-transparent text-navy dark:text-white">
+                                          <SelectTrigger className="h-12 rounded-xl border border-gray-200 dark:border-white/10 bg-transparent text-navy dark:text-white font-semibold">
                                             <SelectValue placeholder="Select type" />
                                           </SelectTrigger>
                                           <SelectContent>
@@ -2793,18 +2841,18 @@ export default function AgentDashboard() {
 
                                       {/* Response Time Description */}
                                       <div className="space-y-1.5">
-                                        <Label className="text-xs font-bold uppercase tracking-wider text-gray-400">Response Time Description</Label>
+                                        <Label className="text-xs font-extrabold uppercase tracking-wider text-navy/70 dark:text-white/70">Response Time Description</Label>
                                         <Input
                                           value={profileForm.responseTime}
                                           onChange={(e) => setProfileForm({ ...profileForm, responseTime: e.target.value })}
-                                          className="h-12 rounded-xl py-3 px-4 border border-gray-200 dark:border-white/10 bg-gray-50/30 dark:bg-white/5 text-navy dark:text-white"
+                                          className="h-12 rounded-xl py-3 px-4 border border-gray-200 dark:border-white/10 bg-gray-50/30 dark:bg-white/5 text-navy dark:text-white font-semibold"
                                           placeholder="e.g. Replies within 5 mins"
                                         />
                                       </div>
                                     </div>
 
                                     <div className="pt-4 text-right border-t border-black/5 dark:border-white/5">
-                                      <Button type="submit" className="rounded-full bg-gold hover:bg-gold/90 text-navy font-bold px-8 shadow-md">
+                                      <Button type="submit" className="h-12 px-8 rounded-xl bg-gold hover:bg-gold/90 text-navy font-extrabold shadow-md border-0 cursor-pointer">
                                         Update Profile
                                       </Button>
                                     </div>
@@ -2849,37 +2897,37 @@ export default function AgentDashboard() {
                                       <div className="space-y-4 max-w-md">
                                         {/* Current Email */}
                                         <div className="space-y-1.5">
-                                          <Label className="text-xs font-bold uppercase tracking-wider text-gray-400">Current Email Address</Label>
+                                          <Label className="text-xs font-extrabold uppercase tracking-wider text-navy/70 dark:text-white/70">Current Email Address</Label>
                                           <Input
                                             value={user?.email || "dubem@example.com"}
                                             disabled
-                                            className="h-12 rounded-xl py-3 px-4 border border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/5 text-muted-foreground cursor-not-allowed"
+                                            className="h-12 rounded-xl py-3 px-4 border border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/5 text-muted-foreground cursor-not-allowed font-semibold"
                                           />
                                         </div>
 
                                         {/* New Email */}
                                         <div className="space-y-1.5">
-                                          <Label className="text-xs font-bold uppercase tracking-wider text-gray-400">New Email Address</Label>
+                                          <Label className="text-xs font-extrabold uppercase tracking-wider text-navy/70 dark:text-white/70">New Email Address</Label>
                                           <Input
                                             type="email"
                                             required
                                             placeholder="Enter new email address"
                                             value={changeEmailForm.newEmail}
                                             onChange={(e) => setChangeEmailForm({ ...changeEmailForm, newEmail: e.target.value })}
-                                            className="h-12 rounded-xl py-3 px-4 border border-gray-200 dark:border-white/10 bg-gray-50/30 dark:bg-white/5 text-navy dark:text-white"
+                                            className="h-12 rounded-xl py-3 px-4 border border-gray-200 dark:border-white/10 bg-gray-50/30 dark:bg-white/5 text-navy dark:text-white font-semibold"
                                           />
                                         </div>
 
                                         {/* Current Password */}
                                         <div className="space-y-1.5">
-                                          <Label className="text-xs font-bold uppercase tracking-wider text-gray-400">Confirm Current Password</Label>
+                                          <Label className="text-xs font-extrabold uppercase tracking-wider text-navy/70 dark:text-white/70">Confirm Current Password</Label>
                                           <Input
                                             type="password"
                                             required
                                             placeholder="Enter your current password"
                                             value={changeEmailForm.password}
                                             onChange={(e) => setChangeEmailForm({ ...changeEmailForm, password: e.target.value })}
-                                            className="h-12 rounded-xl py-3 px-4 border border-gray-200 dark:border-white/10 bg-gray-50/30 dark:bg-white/5 text-navy dark:text-white"
+                                            className="h-12 rounded-xl py-3 px-4 border border-gray-200 dark:border-white/10 bg-gray-50/30 dark:bg-white/5 text-navy dark:text-white font-semibold"
                                           />
                                         </div>
 
@@ -2893,7 +2941,7 @@ export default function AgentDashboard() {
                                           <Button
                                             type="submit"
                                             disabled={isChangingEmail}
-                                            className="rounded-full bg-gold hover:bg-gold/90 text-navy font-bold px-8 shadow-md flex items-center justify-center gap-2"
+                                            className="h-12 px-8 rounded-xl bg-gold hover:bg-gold/90 text-navy font-extrabold shadow-md flex items-center justify-center gap-2 border-0 cursor-pointer"
                                           >
                                             {isChangingEmail ? (
                                               <>
@@ -2928,41 +2976,41 @@ export default function AgentDashboard() {
                                     <form onSubmit={handleUpdatePassword} className="space-y-6 border-b border-black/5 dark:border-white/5 pb-8">
                                       <div className="space-y-4 max-w-md">
                                         <div className="space-y-1.5">
-                                          <Label className="text-xs font-bold uppercase tracking-wider text-gray-400">Current Password</Label>
+                                          <Label className="text-xs font-extrabold uppercase tracking-wider text-navy/70 dark:text-white/70">Current Password</Label>
                                           <Input
                                             type="password"
                                             required
                                             placeholder="Enter current password"
                                             value={passwordForm.current}
                                             onChange={(e) => setPasswordForm({ ...passwordForm, current: e.target.value })}
-                                            className="h-12 rounded-xl py-3 px-4 border border-gray-200 dark:border-white/10 bg-gray-50/30 dark:bg-white/5 text-navy dark:text-white"
+                                            className="h-12 rounded-xl py-3 px-4 border border-gray-200 dark:border-white/10 bg-gray-50/30 dark:bg-white/5 text-navy dark:text-white font-semibold"
                                           />
                                         </div>
                                         <div className="space-y-1.5">
-                                          <Label className="text-xs font-bold uppercase tracking-wider text-gray-400">New Password</Label>
+                                          <Label className="text-xs font-extrabold uppercase tracking-wider text-navy/70 dark:text-white/70">New Password</Label>
                                           <Input
                                             type="password"
                                             required
                                             placeholder="Enter new password (min. 6 characters)"
                                             value={passwordForm.new}
                                             onChange={(e) => setPasswordForm({ ...passwordForm, new: e.target.value })}
-                                            className="h-12 rounded-xl py-3 px-4 border border-gray-200 dark:border-white/10 bg-gray-50/30 dark:bg-white/5 text-navy dark:text-white"
+                                            className="h-12 rounded-xl py-3 px-4 border border-gray-200 dark:border-white/10 bg-gray-50/30 dark:bg-white/5 text-navy dark:text-white font-semibold"
                                           />
                                         </div>
                                         <div className="space-y-1.5">
-                                          <Label className="text-xs font-bold uppercase tracking-wider text-gray-400">Confirm New Password</Label>
+                                          <Label className="text-xs font-extrabold uppercase tracking-wider text-navy/70 dark:text-white/70">Confirm New Password</Label>
                                           <Input
                                             type="password"
                                             required
                                             placeholder="Confirm new password"
                                             value={passwordForm.confirm}
                                             onChange={(e) => setPasswordForm({ ...passwordForm, confirm: e.target.value })}
-                                            className="h-12 rounded-xl py-3 px-4 border border-gray-200 dark:border-white/10 bg-gray-50/30 dark:bg-white/5 text-navy dark:text-white"
+                                            className="h-12 rounded-xl py-3 px-4 border border-gray-200 dark:border-white/10 bg-gray-50/30 dark:bg-white/5 text-navy dark:text-white font-semibold"
                                           />
                                         </div>
                                       </div>
                                       <div className="pt-2">
-                                        <Button type="submit" disabled={isUpdatingPassword} className="rounded-full bg-gold hover:bg-gold/90 text-navy font-bold px-8 shadow-md">
+                                        <Button type="submit" disabled={isUpdatingPassword} className="h-12 px-8 rounded-xl bg-gold hover:bg-gold/90 text-navy font-extrabold shadow-md border-0 cursor-pointer">
                                           {isUpdatingPassword ? "Updating..." : "Change Password"}
                                         </Button>
                                       </div>
@@ -3224,7 +3272,7 @@ export default function AgentDashboard() {
               type="button"
               onClick={async () => {
                 if (tempPhoto && selectedDpFile && user) {
-                  const toastId = toast.loading("Uploading picture to Firebase Storage...");
+                  const toastId = toast.loading("Uploading and updating your profile picture...");
                   try {
                     const storageRef = ref(storage, `agents/${user.uid}/profile_picture_${Date.now()}_${selectedDpFile.name}`);
                     await uploadBytes(storageRef, selectedDpFile);
