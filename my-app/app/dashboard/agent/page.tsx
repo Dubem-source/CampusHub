@@ -98,6 +98,33 @@ interface Listing {
 
 // --- Mock Data ---
 
+const SETTINGS_TAB_INFO = {
+  profile: {
+    title: "Profile Settings",
+    description: "Manage your public agent card details"
+  },
+  account: {
+    title: "Account Settings",
+    description: "Manage your account email and access details"
+  },
+  security: {
+    title: "Security Settings",
+    description: "Manage your account credentials and login sessions"
+  },
+  appearance: {
+    title: "Appearance Settings",
+    description: "Customize the user interface look and theme mode"
+  },
+  notifications: {
+    title: "Notification Settings",
+    description: "Configure channels for inquiry and review updates"
+  },
+  danger: {
+    title: "Danger Zone",
+    description: "Irreversible account deactivation and deletion options"
+  }
+} as const;
+
 const INITIAL_AGENT_DATA = {
   id: 'agent1',
   full_name: 'Johnson Okonkwo',
@@ -1375,9 +1402,9 @@ export default function AgentDashboard() {
                 <>
                   {/* Tab 1: Profile Tab */}
                   {activeTab === "profile" && (
-                    <div className="space-y-8 max-w-xl mx-auto text-left">
+                    <div className="space-y-8 max-w-xl lg:max-w-4xl mx-auto text-left">
                       {/* ALWAYS RENDER PROFILE PREVIEW CARD AT THE TOP */}
-                      <Card className="border-none shadow-lg bg-[#0f1e2d] text-white rounded-none sm:rounded-3xl overflow-hidden relative text-left border-x-0 sm:border border-white/10">
+                      <Card className="border-none shadow-lg bg-white dark:bg-[#0f1e2d] text-navy dark:text-white rounded-none sm:rounded-3xl overflow-hidden relative text-left border-x-0 sm:border border-black/5 dark:border-white/10">
                         <div className="absolute top-0 right-0 w-48 h-48 bg-[#C9952A] opacity-5 blur-[80px] rounded-full -mr-24 -mt-24"></div>
                         <CardContent className="p-6 md:p-8 relative z-10">
                           <div className="flex items-center gap-5">
@@ -1388,54 +1415,54 @@ export default function AgentDashboard() {
                                 className="w-16 h-16 md:w-20 md:h-20 rounded-full border-2 border-gold object-cover bg-white/10"
                               />
                               {isApproved && (
-                                <div className="absolute -bottom-1 -right-1 bg-gold rounded-full p-1 border-2 border-[#0f1e2d]">
+                                <div className="absolute -bottom-1 -right-1 bg-gold rounded-full p-1 border-2 border-white dark:border-[#0f1e2d]">
                                   <ShieldCheck className="h-3.5 w-3.5 text-[#0f1e2d] fill-[#0f1e2d]" />
                                 </div>
                               )}
                             </div>
                             <div>
-                              <h4 className="text-xl font-bold text-white leading-tight">{profileForm.full_name || "Agent Name"}</h4>
+                              <h4 className="text-xl font-bold text-navy dark:text-white leading-tight">{profileForm.full_name || "Agent Name"}</h4>
                               <div className="flex flex-col gap-1 mt-2">
                                 {isApproved ? (
-                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-green-500/20 text-green-400 text-[10px] font-bold border border-green-500/30 w-fit uppercase tracking-wider">
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-green-500/10 text-green-600 dark:bg-green-500/20 dark:text-green-400 text-[10px] font-bold border border-green-500/20 dark:border-green-500/30 w-fit uppercase tracking-wider">
                                     Verified Agent
                                   </span>
                                 ) : (
-                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-400 text-[10px] font-bold border border-amber-500/30 w-fit uppercase tracking-wider">
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400 text-[10px] font-bold border border-amber-500/20 dark:border-amber-500/30 w-fit uppercase tracking-wider">
                                     Vetting Pending
                                   </span>
                                 )}
-                                <span className="text-gray-400 text-[10px] flex items-center gap-1.5 mt-0.5">
+                                <span className="text-navy/60 dark:text-gray-400 text-[10px] flex items-center gap-1.5 mt-0.5">
                                   <span>{profileForm.responseTime}</span>
-                                  <span className="text-gray-500">•</span>
+                                  <span className="text-gray-300 dark:text-gray-600">•</span>
                                   <span>Joined {agentData.joinedDate || "Oct 2025"}</span>
                                 </span>
                               </div>
                             </div>
                           </div>
 
-                          <div className="grid grid-cols-4 gap-2 mt-6 pt-6 border-t border-white/10 text-center">
+                          <div className="grid grid-cols-4 gap-2 mt-6 pt-6 border-t border-black/5 dark:border-white/10 text-center">
                             <div>
-                              <p className="text-white font-extrabold text-base">{isApproved ? agentData.listings.length : "—"}</p>
-                              <p className="text-gray-400 text-[9px] uppercase tracking-wider mt-0.5">Rooms</p>
+                              <p className="text-navy dark:text-white font-extrabold text-base">{isApproved ? agentData.listings.length : "—"}</p>
+                              <p className="text-navy/40 dark:text-gray-400 text-[9px] uppercase tracking-wider mt-0.5">Rooms</p>
                             </div>
                             <div>
-                              <p className="text-white font-extrabold text-base">{isApproved ? agentData.stats.avg_rating : "—"}</p>
-                              <p className="text-gray-400 text-[9px] uppercase tracking-wider mt-0.5">Rating</p>
+                              <p className="text-navy dark:text-white font-extrabold text-base">{isApproved ? agentData.stats.avg_rating : "—"}</p>
+                              <p className="text-navy/40 dark:text-gray-400 text-[9px] uppercase tracking-wider mt-0.5">Rating</p>
                             </div>
                             <div>
-                              <p className="text-white font-extrabold text-base">{isApproved ? "12" : "—"}</p>
-                              <p className="text-gray-400 text-[9px] uppercase tracking-wider mt-0.5">Reviews</p>
+                              <p className="text-navy dark:text-white font-extrabold text-base">{isApproved ? "12" : "—"}</p>
+                              <p className="text-navy/40 dark:text-gray-400 text-[9px] uppercase tracking-wider mt-0.5">Reviews</p>
                             </div>
                             <div>
-                              <p className="text-white font-extrabold text-base">{isApproved ? agentData.stats.total_views : "—"}</p>
-                              <p className="text-gray-400 text-[9px] uppercase tracking-wider mt-0.5">Views</p>
+                              <p className="text-navy dark:text-white font-extrabold text-base">{isApproved ? agentData.stats.total_views : "—"}</p>
+                              <p className="text-navy/40 dark:text-gray-400 text-[9px] uppercase tracking-wider mt-0.5">Views</p>
                             </div>
                           </div>
 
                           {isApproved && (
                             <div className="mt-6 flex justify-between items-center gap-4">
-                              <span className="text-[11px] text-gray-400 flex items-center gap-1.5">
+                              <span className="text-[11px] text-navy/50 dark:text-gray-400 flex items-center gap-1.5">
                                 <Info className="h-3.5 w-3.5 text-gold" />
                                 Live view representation
                               </span>
@@ -1458,7 +1485,7 @@ export default function AgentDashboard() {
                                     toast.success("Profile link copied to clipboard!");
                                   }
                                 }}
-                                className="bg-white/10 border border-white/20 hover:bg-white/20 text-white h-10 px-4 rounded-full flex items-center justify-center gap-2 shadow-lg transition cursor-pointer text-xs font-bold"
+                                className="bg-navy/5 border border-navy/10 hover:bg-navy/10 text-navy dark:bg-white/10 dark:border-white/20 dark:hover:bg-white/20 dark:text-white h-10 px-4 rounded-full flex items-center justify-center gap-2 shadow-lg transition cursor-pointer text-xs font-bold"
                                 title="Share Profile"
                               >
                                 <Share2 className="h-4 w-4 text-gold" />
@@ -2591,10 +2618,10 @@ export default function AgentDashboard() {
                       {/* Settings Title Header */}
                       <div className="mb-4 md:mb-8 text-left p-4">
                         <h1 className="text-3xl md:text-3xl font-extrabold tracking-tight text-navy dark:text-white">
-                          Settings
+                          {SETTINGS_TAB_INFO[settingsTab].title}
                         </h1>
                         <p className="text-muted-foreground text-xs md:text-sm mt-1">
-                          Manage your account settings and preferences
+                          {SETTINGS_TAB_INFO[settingsTab].description}
                         </p>
                       </div>
 
@@ -2645,10 +2672,6 @@ export default function AgentDashboard() {
                                   transition={{ duration: 0.15 }}
                                 >
                                   <form onSubmit={handleUpdateAgentProfile} className="space-y-6">
-                                    <div>
-                                      <h3 className="text-xl font-bold text-navy dark:text-white">Profile Settings</h3>
-                                      <p className="text-xs text-gray-550 dark:text-gray-400 mt-1">Manage your public agent card details</p>
-                                    </div>
 
                                     {/* Profile Photo upload */}
                                     <div className="border-b border-black/5 dark:border-white/5 pb-6">
@@ -2799,10 +2822,6 @@ export default function AgentDashboard() {
                                   transition={{ duration: 0.15 }}
                                 >
                                   <form onSubmit={handleChangeEmailSubmit} className="space-y-6">
-                                    <div>
-                                      <h3 className="text-xl font-bold text-navy dark:text-white">Account Credentials</h3>
-                                      <p className="text-xs text-gray-550 dark:text-gray-400 mt-1">Manage your account email and access details</p>
-                                    </div>
 
                                     <div className="p-4 bg-amber-50 dark:bg-amber-500/10 border border-amber-200/20 text-amber-700 dark:text-amber-300 rounded-2xl text-xs space-y-1.5 leading-relaxed text-left">
                                       <span className="font-bold flex items-center gap-1.5 uppercase tracking-wider text-[10px]">
@@ -2907,10 +2926,6 @@ export default function AgentDashboard() {
                                   <div className="space-y-8">
                                     {/* Password Reset form */}
                                     <form onSubmit={handleUpdatePassword} className="space-y-6 border-b border-black/5 dark:border-white/5 pb-8">
-                                      <div>
-                                        <h3 className="text-xl font-bold text-navy dark:text-white">Security Credentials</h3>
-                                        <p className="text-xs text-gray-550 dark:text-gray-400 mt-1">Manage your account login credentials</p>
-                                      </div>
                                       <div className="space-y-4 max-w-md">
                                         <div className="space-y-1.5">
                                           <Label className="text-xs font-bold uppercase tracking-wider text-gray-400">Current Password</Label>
@@ -3019,10 +3034,6 @@ export default function AgentDashboard() {
                                   transition={{ duration: 0.15 }}
                                 >
                                   <div className="space-y-6">
-                                    <div>
-                                      <h3 className="text-xl font-bold text-navy dark:text-white">Appearance Settings</h3>
-                                      <p className="text-xs text-gray-555 dark:text-gray-400 mt-1">Customize the interface look, dark modes, and visual layouts</p>
-                                    </div>
                                     <div className="space-y-4 text-left">
                                       <span className="text-xs font-bold uppercase tracking-wider text-gray-455">Select Theme Mode</span>
                                       <div className="grid grid-cols-3 gap-4 max-w-xl">
@@ -3067,10 +3078,6 @@ export default function AgentDashboard() {
                                   transition={{ duration: 0.15 }}
                                 >
                                   <div className="space-y-6">
-                                    <div>
-                                      <h3 className="text-xl font-bold text-navy dark:text-white">Notification Channel Preferences</h3>
-                                      <p className="text-xs text-gray-555 dark:text-gray-400 mt-1">Configure channels for inquiry and review updates</p>
-                                    </div>
                                     <div className="space-y-4 max-w-lg text-left">
                                       {[
                                         { state: notifyInquiries, setter: setNotifyInquiries, title: "New Inquiry", desc: "Notify me when a student asks a question about my listings." },
@@ -3117,11 +3124,6 @@ export default function AgentDashboard() {
                                   transition={{ duration: 0.15 }}
                                 >
                                   <div className="space-y-6 text-left">
-                                    <div>
-                                      <h3 className="text-xl font-bold text-rose-600 dark:text-rose-400">Danger Zone</h3>
-                                      <p className="text-xs text-gray-555 dark:text-gray-400 mt-1">Irreversible account cancellation actions</p>
-                                    </div>
-
                                     <div className="p-5 bg-rose-50 dark:bg-rose-500/5 rounded-3xl border border-rose-500/10 space-y-4 max-w-xl">
                                       <div className="space-y-1 text-left">
                                         <h4 className="text-sm font-bold text-rose-700 dark:text-rose-455">Deactivate Account</h4>

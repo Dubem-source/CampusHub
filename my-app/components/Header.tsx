@@ -129,7 +129,7 @@ export default function Header() {
                 className="hidden items-center gap-2 rounded-full border border-black/10 bg-white px-3 py-1.5 text-sm font-medium text-black shadow-sm transition hover:-translate-y-0.5 hover:shadow-md md:inline-flex"
               >
                 <img
-                  src={agentData.photo}
+                  src={agentData.photo || "https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y"}
                   alt={agentData.full_name}
                   className="w-6 h-6 rounded-full object-cover border border-gold"
                 />
@@ -141,7 +141,7 @@ export default function Header() {
                 className="inline-flex items-center justify-center rounded-full md:hidden"
               >
                 <img
-                  src={agentData.photo}
+                  src={agentData.photo || "https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y"}
                   alt={agentData.full_name}
                   className="w-8 h-8 rounded-full object-cover border border-gold"
                 />

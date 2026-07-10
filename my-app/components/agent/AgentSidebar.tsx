@@ -55,7 +55,7 @@ export function AgentSidebar({
       <SidebarHeader className="h-[80px] flex justify-center flex-col px-6 border-b border-black/5 dark:border-white/10 bg-white dark:bg-[#0f1d2e]">
         <div className="flex items-center gap-3">
           <img 
-            src={agentPhoto} 
+            src={agentPhoto || "https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y"} 
             alt={agentName}
             className="w-9 h-9 rounded-xl border border-gold object-cover bg-white/10" 
           />

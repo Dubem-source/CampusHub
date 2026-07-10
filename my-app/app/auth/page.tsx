@@ -20,7 +20,8 @@ import {
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
   sendEmailVerification,
-  signOut
+  signOut,
+  updateProfile
 } from "firebase/auth";
 import { doc, setDoc, getDoc, updateDoc } from "firebase/firestore";
 
@@ -155,6 +156,9 @@ function AuthContent() {
       // Send email verification
       await sendEmailVerification(user);
 
+      const defaultPhoto = "https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y";
+      await updateProfile(user, { photoURL: defaultPhoto });
+
       // Create profile document in Firestore
       await setDoc(doc(db, "users", user.uid), {
         uid: user.uid,
@@ -167,6 +171,8 @@ function AuthContent() {
         ninUploaded: false,
         approved: false,
         verified: false,
+        photoURL: defaultPhoto,
+        photo: defaultPhoto,
         createdAt: new Date().toISOString(),
       });
 
