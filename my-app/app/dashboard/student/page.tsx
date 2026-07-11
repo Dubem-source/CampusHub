@@ -43,6 +43,7 @@ import {
   Tag,
   X,
   Sparkles,
+  AlertTriangle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -568,7 +569,7 @@ function StudentDashboardContent() {
   };
 
   // Settings State Hooks
-  const [settingsTab, setSettingsTab] = useState<'profile' | 'account' | 'roommate' | 'privacy' | 'notifications' | 'appearance'>('profile');
+  const [settingsTab, setSettingsTab] = useState<'profile' | 'account' | 'roommate' | 'privacy' | 'notifications' | 'appearance' | 'danger'>('profile');
   const [prefGender, setPrefGender] = useState('Any');
   const [prefBudget, setPrefBudget] = useState('₦80,000 – ₦120,000');
   const [prefLocation, setPrefLocation] = useState('Eziobodo');
@@ -1596,7 +1597,8 @@ function StudentDashboardContent() {
                             { id: 'roommate', label: 'Roommate Preferences', icon: Users },
                             { id: 'privacy', label: 'Privacy & Safety', icon: Shield },
                             { id: 'notifications', label: 'Notifications', icon: Bell },
-                            { id: 'appearance', label: 'Appearance', icon: Palette }
+                            { id: 'appearance', label: 'Appearance', icon: Palette },
+                            { id: 'danger', label: 'Danger Zone', icon: AlertTriangle }
                           ].map(cat => {
                             const isSubActive = settingsTab === cat.id;
                             return (
@@ -1892,7 +1894,7 @@ function StudentDashboardContent() {
                                         type="checkbox"
                                         checked={privacyProfilePublic}
                                         onChange={(e) => setPrivacyProfilePublic(e.target.checked)}
-                                        className="mt-1 h-4 w-4 rounded border-gray-300 text-gold focus:ring-gold cursor-pointer"
+                                        className="mt-1 h-4 w-4 rounded border-gray-300 accent-gold focus:ring-gold cursor-pointer"
                                       />
                                       <div className="space-y-0.5 text-left">
                                         <span className="text-sm font-bold text-navy dark:text-white">Public Matching Profile</span>
@@ -1904,7 +1906,7 @@ function StudentDashboardContent() {
                                         type="checkbox"
                                         checked={privacyPhonePublic}
                                         onChange={(e) => setPrivacyPhonePublic(e.target.checked)}
-                                        className="mt-1 h-4 w-4 rounded border-gray-300 text-gold focus:ring-gold cursor-pointer"
+                                        className="mt-1 h-4 w-4 rounded border-gray-300 accent-gold focus:ring-gold cursor-pointer"
                                       />
                                       <div className="space-y-0.5 text-left">
                                         <span className="text-sm font-bold text-navy dark:text-white">Show WhatsApp Phone to matches</span>
@@ -1944,7 +1946,7 @@ function StudentDashboardContent() {
                                         type="checkbox"
                                         checked={notifyMatches}
                                         onChange={(e) => setNotifyMatches(e.target.checked)}
-                                        className="mt-1 h-4 w-4 rounded border-gray-300 text-gold focus:ring-gold cursor-pointer"
+                                        className="mt-1 h-4 w-4 rounded border-gray-300 accent-gold focus:ring-gold cursor-pointer"
                                       />
                                       <div className="space-y-0.5 text-left">
                                         <span className="text-sm font-bold text-navy dark:text-white">Email Match Alerts</span>
@@ -1956,7 +1958,7 @@ function StudentDashboardContent() {
                                         type="checkbox"
                                         checked={notifyWhatsApp}
                                         onChange={(e) => setNotifyWhatsApp(e.target.checked)}
-                                        className="mt-1 h-4 w-4 rounded border-gray-300 text-gold focus:ring-gold cursor-pointer"
+                                        className="mt-1 h-4 w-4 rounded border-gray-300 accent-gold focus:ring-gold cursor-pointer"
                                       />
                                       <div className="space-y-0.5 text-left">
                                         <span className="text-sm font-bold text-navy dark:text-white">WhatsApp Match Notifications</span>
@@ -2019,6 +2021,52 @@ function StudentDashboardContent() {
                                         );
                                       })}
                                     </div>
+                                  </div>
+                                </div>
+                              </motion.div>
+                            )}
+
+                            {/* Danger Zone */}
+                            {settingsTab === 'danger' && (
+                              <motion.div
+                                key="danger"
+                                initial={{ opacity: 0, x: 16 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: -16 }}
+                                transition={{ duration: 0.15, ease: "easeInOut" }}
+                              >
+                                <div className="space-y-6 text-left">
+                                  <div>
+                                    <h3 className="text-xl font-bold text-rose-700 dark:text-rose-500">Danger Zone</h3>
+                                    <p className="text-xs text-rose-900/60 dark:text-rose-300/60 mt-1">Irreversible account deactivation and deletion options</p>
+                                  </div>
+                                  
+                                  <div className="p-5 bg-rose-50 dark:bg-rose-500/5 rounded-3xl border border-rose-500/10 space-y-4 max-w-xl">
+                                    <div className="space-y-1 text-left">
+                                      <h4 className="text-sm font-bold text-rose-700 dark:text-rose-455">Deactivate Account</h4>
+                                      <p className="text-xs text-rose-900/60 dark:text-rose-300/60">Temporarily hide all listed items and flatmate profiles from CampusHub browser search results. You can reactivate your account at any time.</p>
+                                    </div>
+                                    <Button
+                                      type="button"
+                                      onClick={() => toast.error("Account deactivation is disabled in test mode.")}
+                                      className="rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs px-5 py-2.5 cursor-pointer border-0 shadow-sm"
+                                    >
+                                      Deactivate Account
+                                    </Button>
+                                  </div>
+
+                                  <div className="p-5 bg-rose-50 dark:bg-rose-500/5 rounded-3xl border border-rose-500/10 space-y-4 max-w-xl">
+                                    <div className="space-y-1 text-left">
+                                      <h4 className="text-sm font-bold text-rose-700 dark:text-rose-455">Delete Account</h4>
+                                      <p className="text-xs text-rose-900/60 dark:text-rose-300/60">Permanently delete your profile documents, verify badges, and active listings from database. This action is irreversible.</p>
+                                    </div>
+                                    <Button
+                                      type="button"
+                                      onClick={() => toast.error("Account deletion is disabled in test mode.")}
+                                      className="rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs px-5 py-2.5 cursor-pointer border-0 shadow-sm"
+                                    >
+                                      Delete Account
+                                    </Button>
                                   </div>
                                 </div>
                               </motion.div>

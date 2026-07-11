@@ -1357,7 +1357,7 @@ export default function AgentDashboard() {
           )}>
 
           {/* Section Title (placed below top bar nav) */}
-          {activeTab !== "profile" && activeTab !== "view-listing" && (
+          {activeTab !== "profile" && activeTab !== "view-listing" && activeTab !== "settings" && (
             <div className="flex flex-col gap-4 mb-8 px-6 sm:px-0">
               <div className="text-left">
                 <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-navy dark:text-white">
@@ -2798,7 +2798,7 @@ export default function AgentDashboard() {
                                             type="checkbox"
                                             checked={whatsAppSameAsPhone}
                                             onChange={(e) => setWhatsAppSameAsPhone(e.target.checked)}
-                                            className="h-4 w-4 rounded border-gray-350 text-gold focus:ring-gold cursor-pointer"
+                                            className="h-4 w-4 rounded border-gray-350 accent-gold focus:ring-gold cursor-pointer"
                                           />
                                           <span>My WhatsApp number is the same as my phone number</span>
                                         </label>
@@ -3048,7 +3048,7 @@ export default function AgentDashboard() {
                                           <input
                                             type="checkbox"
                                             defaultChecked={false}
-                                            className="mt-1 h-4 w-4 rounded border-gray-300 text-gold focus:ring-gold cursor-pointer"
+                                            className="mt-1 h-4 w-4 rounded border-gray-300 accent-gold focus:ring-gold cursor-pointer"
                                           />
                                           <div className="space-y-0.5 text-left">
                                             <span className="text-sm font-bold text-navy dark:text-white">Enable 2FA Verification</span>
@@ -3171,7 +3171,7 @@ export default function AgentDashboard() {
                                             type="checkbox"
                                             checked={item.state}
                                             onChange={(e) => item.setter(e.target.checked)}
-                                            className="mt-1 h-4 w-4 rounded border-gray-300 text-gold focus:ring-gold cursor-pointer"
+                                            className="mt-1 h-4 w-4 rounded border-gray-300 accent-gold focus:ring-gold cursor-pointer"
                                           />
                                           <div className="space-y-0.5 text-left">
                                             <span className="text-sm font-bold text-navy dark:text-white">{item.title}</span>
