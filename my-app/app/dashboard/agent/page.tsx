@@ -45,6 +45,7 @@ import {
   Palette,
   Monitor,
   PlusCircle,
+  Save,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import Image from "next/image";
@@ -2665,11 +2666,11 @@ export default function AgentDashboard() {
                     <div className="max-w-4xl mx-auto text-left space-y-6">
                       {/* Settings Title Header */}
                       <div className="mb-4 md:mb-8 text-left p-4">
-                        <h1 className="text-3xl md:text-3xl font-extrabold tracking-tight text-navy dark:text-white">
-                          {SETTINGS_TAB_INFO[settingsTab].title}
+                        <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-navy dark:text-white">
+                          Settings
                         </h1>
                         <p className="text-muted-foreground text-xs md:text-sm mt-1">
-                          {SETTINGS_TAB_INFO[settingsTab].description}
+                          Manage your account settings and preferences
                         </p>
                       </div>
 
@@ -2720,6 +2721,10 @@ export default function AgentDashboard() {
                                   transition={{ duration: 0.15 }}
                                 >
                                   <form onSubmit={handleUpdateAgentProfile} className="space-y-6">
+                                    <div className="space-y-1 text-left">
+                                      <h3 className="text-xl font-bold text-navy dark:text-white">Profile Settings</h3>
+                                      <p className="text-xs text-gray-550 dark:text-gray-400">Manage your public agent card details</p>
+                                    </div>
 
                                     {/* Profile Photo upload */}
                                     <div className="border-b border-black/5 dark:border-white/5 pb-6">
@@ -2852,7 +2857,8 @@ export default function AgentDashboard() {
                                     </div>
 
                                     <div className="pt-4 text-right border-t border-black/5 dark:border-white/5">
-                                      <Button type="submit" className="h-12 px-8 rounded-xl bg-gold hover:bg-gold/90 text-navy font-extrabold shadow-md border-0 cursor-pointer">
+                                      <Button type="submit" className="h-12 px-8 rounded-xl bg-gold hover:bg-gold/90 text-navy font-extrabold shadow-md border-0 cursor-pointer flex items-center justify-center gap-2">
+                                        <Save size={16} className="stroke-[2.5]" />
                                         Update Profile
                                       </Button>
                                     </div>
@@ -2870,6 +2876,10 @@ export default function AgentDashboard() {
                                   transition={{ duration: 0.15 }}
                                 >
                                   <form onSubmit={handleChangeEmailSubmit} className="space-y-6">
+                                    <div className="space-y-1 text-left">
+                                      <h3 className="text-xl font-bold text-navy dark:text-white">Account Settings</h3>
+                                      <p className="text-xs text-gray-550 dark:text-gray-400">Manage your account email and access details</p>
+                                    </div>
 
                                     <div className="p-4 bg-amber-50 dark:bg-amber-500/10 border border-amber-200/20 text-amber-700 dark:text-amber-300 rounded-2xl text-xs space-y-1.5 leading-relaxed text-left">
                                       <span className="font-bold flex items-center gap-1.5 uppercase tracking-wider text-[10px]">
@@ -2952,7 +2962,10 @@ export default function AgentDashboard() {
                                                 Updating Email...
                                               </>
                                             ) : (
-                                              "Change Email"
+                                              <>
+                                                <Save size={16} className="stroke-[2.5]" />
+                                                Change Email
+                                              </>
                                             )}
                                           </Button>
                                         </div>
@@ -2972,6 +2985,10 @@ export default function AgentDashboard() {
                                   transition={{ duration: 0.15 }}
                                 >
                                   <div className="space-y-8">
+                                    <div className="space-y-1 text-left">
+                                      <h3 className="text-xl font-bold text-navy dark:text-white">Security Settings</h3>
+                                      <p className="text-xs text-gray-550 dark:text-gray-400">Manage your account credentials and login sessions</p>
+                                    </div>
                                     {/* Password Reset form */}
                                     <form onSubmit={handleUpdatePassword} className="space-y-6 border-b border-black/5 dark:border-white/5 pb-8">
                                       <div className="space-y-4 max-w-md">
@@ -3010,8 +3027,15 @@ export default function AgentDashboard() {
                                         </div>
                                       </div>
                                       <div className="pt-2">
-                                        <Button type="submit" disabled={isUpdatingPassword} className="h-12 px-8 rounded-xl bg-gold hover:bg-gold/90 text-navy font-extrabold shadow-md border-0 cursor-pointer">
-                                          {isUpdatingPassword ? "Updating..." : "Change Password"}
+                                        <Button type="submit" disabled={isUpdatingPassword} className="h-12 px-8 rounded-xl bg-gold hover:bg-gold/90 text-navy font-extrabold shadow-md border-0 cursor-pointer flex items-center justify-center gap-2">
+                                          {isUpdatingPassword ? (
+                                            "Updating..."
+                                          ) : (
+                                            <>
+                                              <Save size={16} className="stroke-[2.5]" />
+                                              Change Password
+                                            </>
+                                          )}
                                         </Button>
                                       </div>
                                     </form>
@@ -3082,6 +3106,10 @@ export default function AgentDashboard() {
                                   transition={{ duration: 0.15 }}
                                 >
                                   <div className="space-y-6">
+                                    <div className="space-y-1 text-left">
+                                      <h3 className="text-xl font-bold text-navy dark:text-white">Appearance Settings</h3>
+                                      <p className="text-xs text-gray-550 dark:text-gray-400">Customize the user interface look and theme mode</p>
+                                    </div>
                                     <div className="space-y-4 text-left">
                                       <span className="text-xs font-bold uppercase tracking-wider text-gray-455">Select Theme Mode</span>
                                       <div className="grid grid-cols-3 gap-4 max-w-xl">
@@ -3126,6 +3154,10 @@ export default function AgentDashboard() {
                                   transition={{ duration: 0.15 }}
                                 >
                                   <div className="space-y-6">
+                                    <div className="space-y-1 text-left">
+                                      <h3 className="text-xl font-bold text-navy dark:text-white">Notification Settings</h3>
+                                      <p className="text-xs text-gray-550 dark:text-gray-400">Configure channels for inquiry and review updates</p>
+                                    </div>
                                     <div className="space-y-4 max-w-lg text-left">
                                       {[
                                         { state: notifyInquiries, setter: setNotifyInquiries, title: "New Inquiry", desc: "Notify me when a student asks a question about my listings." },
@@ -3153,8 +3185,9 @@ export default function AgentDashboard() {
                                       <Button
                                         type="button"
                                         onClick={() => toast.success("Notification preferences saved successfully.")}
-                                        className="rounded-full bg-gold hover:bg-gold/90 text-navy font-bold px-8 shadow-md"
+                                        className="h-12 px-8 rounded-xl bg-gold hover:bg-gold/90 text-navy font-extrabold shadow-md border-0 cursor-pointer flex items-center justify-center gap-2"
                                       >
+                                        <Save size={16} className="stroke-[2.5]" />
                                         Save Preferences
                                       </Button>
                                     </div>
@@ -3172,6 +3205,10 @@ export default function AgentDashboard() {
                                   transition={{ duration: 0.15 }}
                                 >
                                   <div className="space-y-6 text-left">
+                                    <div className="space-y-1 text-left">
+                                      <h3 className="text-xl font-bold text-rose-700 dark:text-rose-500">Danger Zone</h3>
+                                      <p className="text-xs text-rose-900/60 dark:text-rose-300/60">Irreversible account deactivation and deletion options</p>
+                                    </div>
                                     <div className="p-5 bg-rose-50 dark:bg-rose-500/5 rounded-3xl border border-rose-500/10 space-y-4 max-w-xl">
                                       <div className="space-y-1 text-left">
                                         <h4 className="text-sm font-bold text-rose-700 dark:text-rose-455">Deactivate Account</h4>
