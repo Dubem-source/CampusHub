@@ -622,14 +622,11 @@ export default function AgentDashboard() {
       setIsDark(isSystemDark);
       if (isSystemDark) {
         document.documentElement.classList.add('dark');
-        document.cookie = "theme=dark; path=/; max-age=31536000; SameSite=Lax";
       } else {
         document.documentElement.classList.remove('dark');
-        document.cookie = "theme=light; path=/; max-age=31536000; SameSite=Lax";
       }
     } else {
       localStorage.setItem('theme', mode);
-      document.cookie = `theme=${mode}; path=/; max-age=31536000; SameSite=Lax`;
       setIsDark(mode === 'dark');
       if (mode === 'dark') {
         document.documentElement.classList.add('dark');
