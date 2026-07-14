@@ -12,6 +12,10 @@ import {
   Building,
   ArrowRight,
   ArrowLeft,
+  ShieldCheck,
+  Users,
+  ShoppingBag,
+  Sparkles,
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -198,23 +202,70 @@ function AuthContent() {
   return (
     <div className="flex min-h-screen flex-col lg:flex-row bg-white font-sans text-[#0f1e2d]">
       {/* --- Left Brand Panel (Desktop Only) --- */}
-      <div className="hidden lg:flex lg:w-1/2 bg-[#0f1e2d] items-center justify-center p-12">
-        <div className="text-center max-w-md">
-          <Link href="/" className="flex flex-col items-center mb-8 group hover:opacity-90 transition-opacity">
-            <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mb-6 shadow-xl p-1 overflow-hidden group-hover:scale-105 transition-transform duration-200">
-              <img src="/image/Campus-Hub.png" alt="CampusHub Logo" className="w-full h-full object-contain rounded-full" />
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-[#0c1622] via-[#0f1e2d] to-[#1b2a3a] items-center justify-center p-12 relative overflow-hidden">
+        {/* Decorative Glowing Mesh Orbs */}
+        <div className="absolute -bottom-20 -left-20 w-96 h-96 rounded-full bg-[#C9952A]/10 blur-[120px] pointer-events-none" />
+        <div className="absolute -top-20 -right-20 w-96 h-96 rounded-full bg-blue-500/5 blur-[120px] pointer-events-none" />
+
+        <div className="text-center max-w-lg z-10 w-full flex flex-col items-center">
+          <Link href="/" className="flex flex-col items-center mb-10 group hover:opacity-95 transition-all">
+            {/* Glowing Logo Container */}
+            <div className="relative mb-6">
+              <div className="absolute inset-0 bg-[#C9952A]/20 rounded-full blur-md group-hover:blur-lg transition-all duration-300" />
+              <div className="relative w-24 h-24 bg-white rounded-full flex items-center justify-center shadow-2xl p-1.5 overflow-hidden group-hover:scale-105 transition-transform duration-300">
+                <img src="/image/Campus-Hub.png" alt="CampusHub Logo" className="w-full h-full object-contain rounded-full" />
+              </div>
             </div>
-            <h1 className="text-4xl font-bold text-white tracking-tight mb-2">
+            <h1 className="text-4xl md:text-5xl font-extrabold text-white tracking-tight mb-3">
               Campus<span className="text-[#C9952A]">Hub</span>
             </h1>
-            <p className="text-[#C9952A] text-lg font-medium">
-              Find your perfect lodge near FUTO
+            <p className="text-gray-300 text-base md:text-lg max-w-sm leading-relaxed">
+              Find verified lodges, perfect roommates, and student services around FUTO.
             </p>
           </Link>
-          
-          <div className="relative h-48 w-full opacity-20 flex items-center justify-center">
-             <div className="absolute inset-0 border-2 border-dashed border-white/30 rounded-[3rem]"></div>
-             <img src="/image/Campus-Hub.png" alt="CampusHub Logo" className="h-24 w-24 object-contain rounded-full" />
+
+          {/* Premium Glass Feature List */}
+          <div className="w-full space-y-4 max-w-md">
+            {[
+              {
+                icon: ShieldCheck,
+                title: "100% Verified Lodges",
+                desc: "Every room is personally inspected to protect you from fake agents and scams.",
+                color: "text-[#C9952A]",
+                bg: "bg-[#C9952A]/10"
+              },
+              {
+                icon: Users,
+                title: "Smart Roommate Matching",
+                desc: "Connect with FUTO students sharing similar departments, levels, habits, and preferences.",
+                color: "text-blue-400",
+                bg: "bg-blue-500/10"
+              },
+              {
+                icon: ShoppingBag,
+                title: "P2P Peer Marketplace",
+                desc: "Buy and sell books, bed frames, and electronics from fellow FUTO students safely.",
+                color: "text-emerald-400",
+                bg: "bg-emerald-500/10"
+              }
+            ].map((item, idx) => (
+              <motion.div
+                key={idx}
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: idx * 0.15, duration: 0.4 }}
+                whileHover={{ y: -2, scale: 1.01 }}
+                className="flex items-start gap-4 p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md text-left transition hover:bg-white/10"
+              >
+                <div className={`p-2.5 rounded-xl ${item.bg} ${item.color} shrink-0`}>
+                  <item.icon className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-white text-sm sm:text-base leading-snug">{item.title}</h3>
+                  <p className="text-xs text-gray-400 mt-1 leading-relaxed">{item.desc}</p>
+                </div>
+              </motion.div>
+            ))}
           </div>
         </div>
       </div>
