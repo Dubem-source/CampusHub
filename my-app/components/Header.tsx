@@ -103,7 +103,7 @@ export default function Header() {
             alt="Campus-Hub Logo"
             width={50}
             height={50}
-            className="rounded-lg"
+            className="rounded-full object-contain bg-white p-0.5 border border-black/5 shadow-sm"
           />
           <span className="text-xl font-bold text-black tracking-tight">CampusHub</span>
         </Link>

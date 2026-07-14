@@ -40,7 +40,7 @@ export default function Footer() {
                 <img
                   src="/image/Campus-Hub.png"
                   alt="CampusHub"
-                  className="h-10 w-10 rounded-lg object-contain"
+                  className="h-10 w-10 rounded-full object-contain bg-white p-0.5 border border-black/5 shadow-sm"
                 />
                 <span className="text-xl font-bold tracking-tight">
                   CampusHub is the faster way to find student housing near FUTO.
@@ -130,7 +130,7 @@ export default function Footer() {
             <img
               src="/image/Campus-Hub.png"
               alt="CampusHub"
-              className="h-5 w-5"
+              className="h-5 w-5 rounded-full object-contain bg-white p-0.5 border border-black/5 shadow-sm"
             />
             © {new Date().getFullYear()} CampusHub. Designed for FUTO students.
           </p>
