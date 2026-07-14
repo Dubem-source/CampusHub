@@ -677,11 +677,13 @@ function StudentDashboardContent() {
     if (mode === 'light') {
       document.documentElement.classList.remove('dark');
       localStorage.setItem('theme', 'light');
+      document.cookie = "theme=light; path=/; max-age=31536000; SameSite=Lax";
       setIsDark(false);
       toast.success("Theme changed to Light");
     } else if (mode === 'dark') {
       document.documentElement.classList.add('dark');
       localStorage.setItem('theme', 'dark');
+      document.cookie = "theme=dark; path=/; max-age=31536000; SameSite=Lax";
       setIsDark(true);
       toast.success("Theme changed to Dark");
     } else {
@@ -690,8 +692,10 @@ function StudentDashboardContent() {
       setIsDark(isSystemDark);
       if (isSystemDark) {
         document.documentElement.classList.add('dark');
+        document.cookie = "theme=dark; path=/; max-age=31536000; SameSite=Lax";
       } else {
         document.documentElement.classList.remove('dark');
+        document.cookie = "theme=light; path=/; max-age=31536000; SameSite=Lax";
       }
       toast.success("Theme synced with System");
     }
