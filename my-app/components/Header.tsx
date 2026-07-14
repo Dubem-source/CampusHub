@@ -95,7 +95,7 @@ export default function Header() {
 
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 z-50 border-b border-white/10 bg-white/80 backdrop-blur-xl">
+      <header className="fixed top-0 left-0 right-0 z-50 border-b border-black/5 dark:border-white/10 bg-white/80 dark:bg-navy/80 backdrop-blur-xl transition-colors duration-300">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 md:px-8 lg:px-10">
         <Link href="/" className="flex items-center gap-2">
           <Image
@@ -105,7 +105,7 @@ export default function Header() {
             height={50}
             className="rounded-full object-contain bg-white p-0.5 border border-black/5 shadow-sm"
           />
-          <span className="text-xl font-bold text-black tracking-tight">CampusHub</span>
+          <span className="text-xl font-bold text-black dark:text-white tracking-tight">CampusHub</span>
         </Link>
 
         <nav className="hidden items-center gap-2 md:flex">
@@ -113,7 +113,7 @@ export default function Header() {
             <Link
               key={link.href}
               href={link.href}
-              className="rounded-full px-4 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-100 hover:text-navy"
+              className="rounded-full px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 transition hover:bg-gray-100 dark:hover:bg-white/10 hover:text-navy dark:hover:text-white"
             >
               {link.label}
             </Link>
@@ -126,14 +126,14 @@ export default function Header() {
               {/* Desktop view profile dashboard link */}
               <Link
                 href="/dashboard/agent"
-                className="hidden items-center gap-2 rounded-full border border-black/10 bg-white px-3 py-1.5 text-sm font-medium text-black shadow-sm transition hover:-translate-y-0.5 hover:shadow-md md:inline-flex"
+                className="hidden items-center gap-2 rounded-full border border-black/10 dark:border-white/10 bg-white dark:bg-white/5 px-3 py-1.5 text-sm font-medium text-black dark:text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md md:inline-flex"
               >
                 <img
                   src={agentData.photo || "https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y"}
                   alt={agentData.full_name}
                   className="w-6 h-6 rounded-full object-cover border border-gold"
                 />
-                <span className="max-w-[100px] truncate">{agentData.full_name.split(" ")[0]}</span>
+                <span className="max-w-[100px] truncate text-black dark:text-white">{agentData.full_name.split(" ")[0]}</span>
               </Link>
               {/* Mobile view profile picture next to hamburger menu */}
               <Link
@@ -152,7 +152,7 @@ export default function Header() {
               {/* Notification bell */}
               <Link
                 href="/dashboard/student?tab=notifications"
-                className="relative flex h-9 w-9 items-center justify-center rounded-full border border-black/10 bg-white text-gray-600 hover:text-navy hover:bg-gray-50 transition shadow-sm md:h-10 md:w-10"
+                className="relative flex h-9 w-9 items-center justify-center rounded-full border border-black/10 dark:border-white/10 bg-white dark:bg-white/5 text-gray-600 dark:text-gray-300 hover:text-navy dark:hover:text-white hover:bg-gray-50 dark:hover:bg-white/10 transition shadow-sm md:h-10 md:w-10"
               >
                 <Bell className="h-4 w-4 md:h-5 md:w-5" />
                 {notificationsCount > 0 && (
@@ -165,7 +165,7 @@ export default function Header() {
               {/* Desktop view profile dashboard link */}
               <Link
                 href="/dashboard/student"
-                className="hidden items-center gap-2 rounded-full border border-black/10 bg-white px-3 py-1.5 text-sm font-medium text-black shadow-sm transition hover:-translate-y-0.5 hover:shadow-md md:inline-flex"
+                className="hidden items-center gap-2 rounded-full border border-black/10 dark:border-white/10 bg-white dark:bg-white/5 px-3 py-1.5 text-sm font-medium text-black dark:text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md md:inline-flex"
               >
                 {studentData.avatar_url ? (
                   <img
@@ -178,7 +178,7 @@ export default function Header() {
                     {getInitials(studentData.full_name)}
                   </div>
                 )}
-                <span className="max-w-[100px] truncate">{studentData.full_name.split(" ")[0]}</span>
+                <span className="max-w-[100px] truncate text-black dark:text-white">{studentData.full_name.split(" ")[0]}</span>
               </Link>
               {/* Mobile view profile picture next to hamburger menu */}
               <Link
@@ -202,13 +202,13 @@ export default function Header() {
             <>
               <Link
                 href="/auth?mode=login"                  
-                className="hidden rounded-full  border border-black/10 bg-white px-4 py-2.5 text-sm font-medium text-black shadow-sm transition hover:-translate-y-0.5 hover:shadow-md md:inline-flex"
+                className="hidden rounded-full border border-black/10 dark:border-white/10 bg-white dark:bg-white/5 px-4 py-2.5 text-sm font-medium text-black dark:text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md md:inline-flex"
               >
                 Login
               </Link>
               <Link
                 href="/auth?mode=signup"
-                className="hidden rounded-full bg-[#e0b445] px-4 py-2.5 text-sm font-semibold text-black shadow-[0_12px_30px_rgba(224,180,69,0.35)] transition hover:-translate-y-0.5 hover:bg-[#d7a93a] md:inline-flex"
+                className="hidden rounded-full bg-[#e0b445] px-4 py-2.5 text-sm font-semibold text-black dark:text-navy shadow-[0_12px_30px_rgba(224,180,69,0.35)] transition hover:-translate-y-0.5 hover:bg-[#d7a93a] md:inline-flex"
               >
                 Sign up
               </Link>
@@ -220,7 +220,7 @@ export default function Header() {
               aria-label="Toggle navigation menu"
               aria-expanded={openMobile}
               onClick={toggleSidebar}
-              className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-black/10 bg-white text-black shadow-sm transition hover:-translate-y-0.5 md:hidden"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-black/10 dark:border-white/10 bg-white dark:bg-white/5 text-black dark:text-white shadow-sm transition hover:-translate-y-0.5 md:hidden"
             >
               {openMobile ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
@@ -230,7 +230,7 @@ export default function Header() {
               aria-label="Toggle navigation menu"
               aria-expanded={mobileMenuOpen}
               onClick={() => setMobileMenuOpen((open) => !open)}
-              className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-black/10 bg-white text-black shadow-sm transition hover:-translate-y-0.5 md:hidden"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-black/10 dark:border-white/10 bg-white dark:bg-white/5 text-black dark:text-white shadow-sm transition hover:-translate-y-0.5 md:hidden"
             >
               {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
@@ -239,13 +239,13 @@ export default function Header() {
       </div>
 
       <div className={`md:hidden ${mobileMenuOpen ? 'block' : 'hidden'}`}>
-        <div className="mx-6 mb-4 rounded-3xl border border-black/10 bg-white p-4 shadow-lg overflow-y-auto max-h-[80vh]">
+        <div className="mx-6 mb-4 rounded-3xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0f1d2e] p-4 shadow-lg overflow-y-auto max-h-[80vh] text-black dark:text-white">
           <nav className="flex flex-col gap-2">
             {links.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
-                className="rounded-2xl px-4 py-3 text-sm font-medium text-gray-700 transition hover:bg-gray-100 hover:text-black"
+                className="rounded-2xl px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 transition hover:bg-gray-100 dark:hover:bg-white/10 hover:text-black dark:hover:text-white"
               >
                 {link.label}
               </Link>
@@ -265,13 +265,13 @@ export default function Header() {
             <div className="mt-3 grid grid-cols-2 gap-3">
               <Link
                 href="/auth?mode=login"
-                className="inline-flex items-center justify-center rounded-full border border-black/10 bg-white px-4 py-3 text-sm font-medium text-gray-700 transition hover:bg-gray-50 hover:text-black"
+                className="inline-flex items-center justify-center rounded-full border border-black/10 dark:border-white/10 bg-white dark:bg-white/5 px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 transition hover:bg-gray-50 dark:hover:bg-white/10 hover:text-black dark:hover:text-white"
               >
                 Login
               </Link>
               <Link
                 href="/auth?mode=signup"
-                className="inline-flex items-center justify-center rounded-full bg-[#e0b445] px-4 py-3 text-sm font-semibold text-black shadow-[0_10px_24px_rgba(224,180,69,0.28)] transition hover:bg-[#d7a93a]"
+                className="inline-flex items-center justify-center rounded-full bg-[#e0b445] px-4 py-3 text-sm font-semibold text-black dark:text-navy shadow-[0_10px_24px_rgba(224,180,69,0.28)] transition hover:bg-[#d7a93a]"
               >
                 Sign up
               </Link>

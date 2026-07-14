@@ -17,6 +17,10 @@ import {
   Star,
   Users,
   X,
+  Building,
+  MapPin,
+  Check,
+  SlidersHorizontal,
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import Header from "../components/Header";
@@ -109,6 +113,10 @@ export default function Home() {
   const router = useRouter();
   const [query, setQuery] = React.useState("");
   const [loading, setLoading] = React.useState(true);
+  
+  // Custom states for public hero section
+  const [selectedArea, setSelectedArea] = React.useState("");
+  const [selectedRoomType, setSelectedRoomType] = React.useState("");
   const [featuredLodges, setFeaturedLodges] = React.useState<(Lodge & { room: RoomUnit })[]>([]);
 
   React.useEffect(() => {
@@ -185,108 +193,131 @@ export default function Home() {
       <Header />
 
       <main className="flex-1">
-        <section className="relative isolate overflow-hidden border-b border-black/5 min-h-[760px] md:min-h-[900px]">
+        <section className="relative isolate overflow-hidden border-b border-black/5 min-h-[820px] lg:min-h-[900px] flex items-center bg-[#060c16]">
           <div className="absolute inset-0">
             <ImageCarousel />
           </div>
-          <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(7,18,38,0.88),rgba(7,18,38,0.72))]" />
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(201,149,42,0.22),transparent_35%),radial-gradient(circle_at_bottom_left,rgba(255,255,255,0.08),transparent_35%)]" />
+          <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(6,12,22,0.95),rgba(6,12,22,0.85))]" />
+          {/* Subtle Grid pattern overlay */}
+          <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:3.5rem_3.5rem]" />
+
+          {/* Luminous Abstract Glow Orbs */}
+          <div className="absolute top-0 right-1/4 w-[500px] h-[500px] rounded-full bg-gradient-to-tr from-gold/15 to-transparent blur-[120px] pointer-events-none" />
+          <div className="absolute bottom-0 left-1/4 w-[400px] h-[400px] rounded-full bg-gradient-to-br from-blue-500/10 to-transparent blur-[100px] pointer-events-none" />
 
           <motion.div
             initial="hidden"
             animate="show"
             variants={stagger}
-            className="relative z-10 mx-auto flex min-h-[760px] max-w-7xl flex-col justify-center px-6 py-16 md:min-h-[900px] md:px-8 lg:px-10"
+            className="relative z-10 mx-auto w-full max-w-7xl px-6 py-20 md:px-8 lg:px-10 grid grid-cols-1 lg:grid-cols-[1.2fr_1fr] gap-12 items-center"
           >
-            <div className="mx-auto max-w-3xl text-center text-white lg:-mt-21">
+            {/* Left Content Area */}
+            <div className="text-center lg:text-left text-white flex flex-col items-center lg:items-start justify-center">
               <motion.div
                 variants={fadeUp}
-                className="inline-flex items-center gap-2 px-4 py-2 text-sm text-white/85 backdrop-blur"
+                className="inline-flex items-center gap-2 px-3 py-1 text-xs font-semibold text-gold bg-gold/10 border border-gold/20 rounded-full w-fit mb-6 shadow-[0_0_15px_rgba(201,149,42,0.1)]"
               >
-                <Sparkles className="h-4 w-4 text-gold" />
-                CampusHub for FUTO students
+                <Sparkles className="h-3.5 w-3.5 text-gold animate-pulse" />
+                <span>Verified FUTO Student Accommodation</span>
               </motion.div>
 
               <motion.h1
                 variants={fadeUp}
-                className="mt-6 lg:mt-4 text-2xl font-semibold leading-[1.05] tracking-tight md:text-6xl lg:text-7xl"
+                className="text-5xl sm:text-6xl lg:text-7xl font-extrabold leading-[1.05] tracking-tight mb-6"
               >
-                Find a lodge near FUTO without the <span className="text-amber-500">stress</span>.
+                Find FUTO Lodges
+                <span className="block text-transparent bg-clip-text bg-gradient-to-r from-gold via-amber-400 to-yellow-200 mt-1">Stress-Free.</span>
               </motion.h1>
 
               <motion.p
                 variants={fadeUp}
-                className="mt-6 lg:mt-4 mx-auto max-w-xl text-base leading-8 text-white/75 md:text-lg"
+                className="text-sm sm:text-base text-gray-300 max-w-xl leading-relaxed mb-8"
               >
-                Browse verified lodges, compare room options, and contact agents
-                directly on WhatsApp. Built for students who want a clean, fast,
-                and trustworthy housing experience.
+                Compare verified student apartments, filter by area/budget, and contact trusted local agents instantly via WhatsApp. Built by students, for students.
               </motion.p>
 
+              {/* Inline Search Capsule Form */}
               <motion.form
                 onSubmit={(e) => {
                   e.preventDefault();
-                  if (query.trim()) {
-                    router.push(`/lodges?query=${encodeURIComponent(query)}`);
-                  } else {
-                    router.push("/lodges");
-                  }
+                  const params = new URLSearchParams();
+                  if (query.trim()) params.set("query", query);
+                  if (selectedArea) params.set("area", selectedArea);
+                  if (selectedRoomType) params.set("type", selectedRoomType);
+                  router.push(`/lodges?${params.toString()}`);
                 }}
                 variants={fadeUp}
-                className="mt-8 flex w-full justify-center"
+                className="w-full max-w-xl mb-10 mx-auto lg:mx-0"
               >
-                <div className="flex w-full max-w-3xl items-center rounded-full bg-white px-3 py-2 shadow-[0_12px_40px_rgba(2,6,23,0.18)] border border-black/5">
-                  <div className="flex items-center px-2">
-                    <div className="inline-flex h-10 w-10 items-center justify-center rounded-md ">
-                      <GraduationCap className="h-5 w-5 text-black " />
-                    </div>
+                <div className="flex flex-col md:flex-row items-stretch gap-2.5 p-2 bg-white/5 border border-white/10 backdrop-blur-xl rounded-2xl md:rounded-full shadow-2xl w-full">
+                  {/* Select Area */}
+                  <div className="flex items-center gap-2 px-3 border-b md:border-b-0 md:border-r border-white/10 py-2 md:py-0">
+                    <MapPin className="h-4 w-4 text-gold shrink-0" />
+                    <select
+                      value={selectedArea}
+                      onChange={(e) => setSelectedArea(e.target.value)}
+                      className="bg-transparent text-white text-xs sm:text-sm border-0 outline-none cursor-pointer pr-4 font-semibold"
+                    >
+                      <option value="" className="bg-[#060c16]">Any Area</option>
+                      <option value="Eziobodo" className="bg-[#060c16]">Eziobodo</option>
+                      <option value="Ihiagwa" className="bg-[#060c16]">Ihiagwa</option>
+                      <option value="Umuchima" className="bg-[#060c16]">Umuchima</option>
+                      <option value="Obinze" className="bg-[#060c16]">Obinze</option>
+                      <option value="FUTO Gate" className="bg-[#060c16]">FUTO Gate</option>
+                    </select>
                   </div>
-                  <input
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    placeholder="Search by room type, area...."
-                    className="w-full bg-transparent px-4 py-3 text-sm text-black placeholder:text-navy/40 outline-none"
-                  />
+
+                  {/* Landmark Search input */}
+                  <div className="flex-1 relative flex items-center gap-2 px-3 py-2 md:py-0">
+                    <Search className="h-4 w-4 text-gray-400 shrink-0" />
+                    <input
+                      type="text"
+                      value={query}
+                      onChange={(e) => setQuery(e.target.value)}
+                      placeholder="Lodge name, landmark, specs..."
+                      className="w-full bg-transparent text-white text-xs sm:text-sm border-0 outline-none placeholder:text-gray-500 animate-none"
+                    />
+                  </div>
+
                   <button
                     type="submit"
-                    className="ml-3 mr-1 rounded-full bg-gold px-5 py-3 text-sm font-semibold text-white bg-amber-500 flex items-center gap-2 shadow-sm"
+                    className="bg-gold text-navy font-extrabold text-xs sm:text-sm px-6 py-3.5 rounded-full flex items-center justify-center gap-2 hover:bg-[#d7a93a] transition-all hover:scale-[1.02] cursor-pointer border-0 shrink-0 shadow-lg shadow-gold/25"
                   >
                     <Search className="h-4 w-4" />
-                    Search
+                    Search Lodges
                   </button>
                 </div>
               </motion.form>
 
-              <motion.div
-                variants={fadeUp}
-                className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row"
-              >
-                <Link
-                  href="/lodges"
-                  className="inline-flex items-center justify-center gap-2 rounded-full bg-gold px-6 py-3.5 text-sm font-semibold text-navy shadow-[0_12px_40px_rgba(201,149,42,0.32)] transition hover:-translate-y-0.5 hover:bg-[#e0b445]"
-                >
-                  Browse lodges <ArrowRight className="h-4 w-4" />
-                </Link>
+              {/* Trust Factor Row */}
+              <motion.div variants={stagger} className="grid grid-cols-3 gap-4 max-w-xl w-full text-center lg:text-left border-t border-white/10 pt-8">
+                {stats.map((item) => (
+                  <div key={item.label} className="space-y-1">
+                    <span className="text-2xl font-extrabold text-white block leading-none">{item.value}</span>
+                    <span className="text-xs text-gray-400 uppercase tracking-wider font-semibold block">{item.label}</span>
+                  </div>
+                ))}
               </motion.div>
+            </div>
+
+            {/* Right Interactive Mockup Showcase (iPhone image) */}
+            <div className="relative flex items-center justify-center w-full mt-10 lg:mt-0 select-none">
+              {/* Luminous Stand Podium effect under phone */}
+              <div className="absolute bottom-2 w-64 h-8 bg-gold/15 blur-[12px] rounded-full transform rotate-x-60 pointer-events-none animate-pulse" />
 
               <motion.div
-                variants={stagger}
-                className="mt-10 grid grid-cols-1 gap-3 sm:grid-cols-3"
+                animate={{ y: [0, -10, 0] }}
+                transition={{ repeat: Infinity, duration: 5, ease: "easeInOut" }}
+                className="relative z-10 flex justify-center w-full max-w-[280px] sm:max-w-[310px]"
               >
-                {stats.map((item) => (
-                  <motion.div
-                    key={item.label}
-                    variants={fadeUp}
-                    className="rounded-3xl border border-white/10 bg-white/10 p-4 backdrop-blur"
-                  >
-                    <div className="text-2xl font-semibold text-white">
-                      {item.value}
-                    </div>
-                    <div className="mt-1 text-sm text-white/65">
-                      {item.label}
-                    </div>
-                  </motion.div>
-                ))}
+                <Image
+                  src="/image/mobile image.png"
+                  alt="CampusHub Mobile Preview"
+                  width={310}
+                  height={620}
+                  className="object-contain"
+                  priority
+                />
               </motion.div>
             </div>
           </motion.div>
