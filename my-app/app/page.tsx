@@ -22,6 +22,7 @@ import {
   Check,
   SlidersHorizontal,
   PanelLeftRightDashed,
+  ChevronDown,
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import Header from "../components/Header";
@@ -118,6 +119,7 @@ export default function Home() {
   // Custom states for public hero section
   const [selectedArea, setSelectedArea] = React.useState("");
   const [selectedRoomType, setSelectedRoomType] = React.useState("");
+  const [areaDropdownOpen, setAreaDropdownOpen] = React.useState(false);
   const [featuredLodges, setFeaturedLodges] = React.useState<(Lodge & { room: RoomUnit })[]>([]);
 
   React.useEffect(() => {
@@ -251,21 +253,56 @@ export default function Home() {
                 className="w-full max-w-xl mb-10 mx-auto lg:mx-0"
               >
                 <div className="flex flex-col md:flex-row items-stretch gap-2.5 p-2 bg-white/5 border border-white/10 backdrop-blur-xl rounded-2xl md:rounded-full shadow-2xl w-full">
-                  {/* Select Area */}
-                  <div className="flex items-center gap-2 px-3 border-b md:border-b-0 md:border-r border-white/10 py-2 md:py-0">
-                    <MapPin className="h-4 w-4 text-gold shrink-0" />
-                    <select
-                      value={selectedArea}
-                      onChange={(e) => setSelectedArea(e.target.value)}
-                      className="bg-transparent text-white text-xs sm:text-sm border-0 outline-none cursor-pointer pr-4 font-semibold"
+                  {/* Custom Area Dropdown */}
+                  <div className="relative flex items-center gap-2 px-3 border-b md:border-b-0 md:border-r border-white/10 py-2 md:py-0 min-w-[140px] select-none">
+                    <div
+                      className="flex items-center justify-between gap-2 w-full cursor-pointer py-1"
+                      onClick={() => setAreaDropdownOpen(!areaDropdownOpen)}
                     >
-                      <option value="" className="bg-[#060c16]">Any Area</option>
-                      <option value="Eziobodo" className="bg-[#060c16]">Eziobodo</option>
-                      <option value="Ihiagwa" className="bg-[#060c16]">Ihiagwa</option>
-                      <option value="Umuchima" className="bg-[#060c16]">Umuchima</option>
-                      <option value="Obinze" className="bg-[#060c16]">Obinze</option>
-                      <option value="FUTO Gate" className="bg-[#060c16]">FUTO Gate</option>
-                    </select>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <MapPin className="h-4 w-4 text-gold shrink-0" />
+                        <span className="text-white text-xs sm:text-sm font-semibold truncate text-left">
+                          {selectedArea || "Any Area"}
+                        </span>
+                      </div>
+                      <ChevronDown className={`h-3.5 w-3.5 text-gray-400 transition-transform duration-200 shrink-0 ${areaDropdownOpen ? 'rotate-180' : ''}`} />
+                    </div>
+
+                    {areaDropdownOpen && (
+                      <>
+                        {/* Overlay to close on outside click */}
+                        <div
+                          className="fixed inset-0 z-40 bg-transparent"
+                          onClick={() => setAreaDropdownOpen(false)}
+                        />
+                        {/* Dropdown Menu list */}
+                        <div className="absolute top-full left-0 mt-3 w-48 bg-[#0d1624] border border-white/10 rounded-2xl shadow-2xl p-1.5 z-50 flex flex-col gap-1 backdrop-blur-xl">
+                          {[
+                            { value: "", label: "Any Area" },
+                            { value: "Eziobodo", label: "Eziobodo" },
+                            { value: "Ihiagwa", label: "Ihiagwa" },
+                            { value: "Umuchima", label: "Umuchima" },
+                            { value: "Obinze", label: "Obinze" },
+                            { value: "FUTO Gate", label: "FUTO Gate" }
+                          ].map((item) => (
+                            <div
+                              key={item.value}
+                              onClick={() => {
+                                setSelectedArea(item.value);
+                                setAreaDropdownOpen(false);
+                              }}
+                              className={`w-full text-left px-3 py-2 rounded-xl text-xs sm:text-sm font-medium transition cursor-pointer select-none ${
+                                selectedArea === item.value
+                                  ? 'bg-[#e0b445] text-navy font-bold shadow-md shadow-gold/15'
+                                  : 'text-white/80 hover:bg-white/5 hover:text-white'
+                              }`}
+                            >
+                              {item.label}
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    )}
                   </div>
 
                   {/* Landmark Search input */}

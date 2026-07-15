@@ -105,7 +105,7 @@ export default function Header() {
             height={50}
             className="rounded-full object-contain bg-white p-0.5 border border-black/5 shadow-sm"
           />
-          <span className="text-xl font-bold text-black dark:text-white tracking-tight">CampusHub</span>
+          <span className="text-xl font-bold text-black dark:text-white tracking-tight">Campus<span className="text-gold">Hub</span></span>
         </Link>
 
         <nav className="hidden items-center gap-2 md:flex">
