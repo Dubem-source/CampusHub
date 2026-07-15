@@ -21,6 +21,7 @@ import {
   MapPin,
   Check,
   SlidersHorizontal,
+  PanelLeftRightDashed,
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import Header from "../components/Header";
@@ -113,7 +114,7 @@ export default function Home() {
   const router = useRouter();
   const [query, setQuery] = React.useState("");
   const [loading, setLoading] = React.useState(true);
-  
+
   // Custom states for public hero section
   const [selectedArea, setSelectedArea] = React.useState("");
   const [selectedRoomType, setSelectedRoomType] = React.useState("");
@@ -209,21 +210,21 @@ export default function Home() {
             initial="hidden"
             animate="show"
             variants={stagger}
-            className="relative z-10 mx-auto w-full max-w-7xl px-6 py-20 md:px-8 lg:px-10 grid grid-cols-1 lg:grid-cols-[1.2fr_1fr] gap-12 items-center"
+            className="relative z-10 mx-auto w-full max-w-7xl px-6 py-20 lg:pt-10 lg:pb-50 md:px-8 lg:px-10 grid grid-cols-1 lg:grid-cols-[1.2fr_1fr] gap-12 items-center"
           >
             {/* Left Content Area */}
             <div className="text-center lg:text-left text-white flex flex-col items-center lg:items-start justify-center">
               <motion.div
                 variants={fadeUp}
-                className="inline-flex items-center gap-2 px-3 py-1 text-xs font-semibold text-gold bg-gold/10 border border-gold/20 rounded-full w-fit mb-6 shadow-[0_0_15px_rgba(201,149,42,0.1)]"
+                className="inline-flex items-center gap-2 px-3 py-1 text-xs font-semibold text-gold   w-fit mb-6 shadow-[0_0_15px_rgba(201,149,42,0.1)]"
               >
-                <Sparkles className="h-3.5 w-3.5 text-gold animate-pulse" />
+
                 <span>Verified FUTO Student Accommodation</span>
               </motion.div>
 
               <motion.h1
                 variants={fadeUp}
-                className="text-5xl sm:text-6xl lg:text-7xl font-extrabold leading-[1.05] tracking-tight mb-6"
+                className="text-4xl sm:text-6xl lg:text-7xl font-extrabold leading-[1.05] tracking-tight mb-6"
               >
                 Find FUTO Lodges
                 <span className="block text-transparent bg-clip-text bg-gradient-to-r from-gold via-amber-400 to-yellow-200 mt-1">Stress-Free.</span>
