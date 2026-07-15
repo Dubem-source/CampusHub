@@ -245,12 +245,20 @@ export default function AgentDashboard() {
     }
   }, [profile]);
 
-  // Protect the dashboard route based on user auth state
+  // ── Route Guard: must be logged in AND be an agent ──
   useEffect(() => {
-    if (!authLoading && !user) {
+    if (authLoading) return; // wait until Firebase resolves
+    if (!user) {
       router.push("/auth?mode=login");
+      return;
     }
-  }, [user, authLoading, router]);
+    if (profile && profile.role !== "agent") {
+      // Logged in but wrong role — redirect them to their correct dashboard
+      if (profile.role === "student") router.push("/dashboard/student");
+      else if (profile.role === "admin") router.push("/admin");
+      else router.push("/auth?mode=login");
+    }
+  }, [user, profile, authLoading, router]);
 
   const [listingsLoading, setListingsLoading] = useState(true);
 
@@ -469,7 +477,6 @@ export default function AgentDashboard() {
     };
 
     handleSync();
-    localStorage.setItem("agent_logged_in", "true");
 
     window.addEventListener("focus", handleSync);
     window.addEventListener("storage", handleSync);
@@ -502,7 +509,7 @@ export default function AgentDashboard() {
             ninUploaded: data.ninUploaded !== undefined ? data.ninUploaded : prev.ninUploaded,
             photo: data.photoURL || data.photo || prev.photo,
           };
-          localStorage.setItem("agent_data", JSON.stringify(updated));
+          // No localStorage write — AuthContext is the source of truth
           return updated;
         });
         setProfileForm(prev => ({

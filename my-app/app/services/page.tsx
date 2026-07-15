@@ -15,11 +15,14 @@ import {
   ServiceApplication 
 } from "../../lib/marketplace-services-data";
 import { toast } from "react-hot-toast";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function ServicesPage() {
   const router = useRouter();
+  const { user, profile } = useAuth();
+  // A user is considered "logged in" as a student if they have a Firebase session + student role
+  const isLoggedIn = !!user && profile?.role === "student";
   const [providers, setProviders] = useState<ServiceProvider[]>([]);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
 
   useEffect(() => {
@@ -43,11 +46,6 @@ export default function ServicesPage() {
   useEffect(() => {
     // Load vetted service providers
     setProviders(getServiceProviders());
-
-    // Check login status
-    const studentLoggedIn = localStorage.getItem("student_logged_in") === "true";
-    const userRole = localStorage.getItem("user_role");
-    setIsLoggedIn(studentLoggedIn && userRole === "student");
 
     // Sync if updated
     const handleSync = () => {

@@ -261,12 +261,7 @@ export function StudentSidebar({
             <SidebarMenuButton 
               onClick={onLogout || (() => {
                 setOpenMobile(false);
-                localStorage.removeItem("student_logged_in");
-                localStorage.removeItem("student_data");
-                localStorage.removeItem("agent_logged_in");
-                localStorage.removeItem("agent_data");
-                localStorage.removeItem("user_role");
-                window.dispatchEvent(new Event("student-data-updated"));
+                // signOut(auth) in AuthContext handles session teardown automatically
                 window.location.href = "/";
               })}
               className="text-navy/70 dark:text-white/70 hover:text-navy hover:dark:text-white hover:bg-navy/5 hover:dark:bg-white/5 px-3 py-6 gap-3 rounded-lg"

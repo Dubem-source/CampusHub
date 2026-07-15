@@ -158,11 +158,7 @@ export function AgentSidebar({
           <SidebarMenuItem>
             <SidebarMenuButton 
               onClick={onLogout || (() => {
-                localStorage.removeItem("agent_logged_in");
-                localStorage.removeItem("agent_data");
-                localStorage.removeItem("student_logged_in");
-                localStorage.removeItem("student_data");
-                localStorage.removeItem("user_role");
+                // signOut(auth) in AuthContext handles session teardown automatically
                 window.location.href = "/";
               })}
               className="text-rose-600 dark:text-rose-400 hover:text-rose-700 hover:dark:text-rose-300 hover:bg-rose-500/10 hover:dark:bg-rose-500/10 px-3 py-6 gap-3 rounded-lg"

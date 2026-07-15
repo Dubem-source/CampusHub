@@ -289,12 +289,20 @@ function StudentDashboardContent() {
     }
   }, [profile]);
 
-  // Protect the dashboard route based on user auth state
+  // ── Route Guard: must be logged in AND be a student ──
   useEffect(() => {
-    if (!authLoading && !user) {
+    if (authLoading) return; // wait until Firebase resolves
+    if (!user) {
       router.push("/auth?mode=login");
+      return;
     }
-  }, [user, authLoading, router]);
+    if (profile && profile.role !== "student") {
+      // Logged in but wrong role — redirect them to their correct dashboard
+      if (profile.role === "agent") router.push("/dashboard/agent");
+      else if (profile.role === "admin") router.push("/admin");
+      else router.push("/auth?mode=login");
+    }
+  }, [user, profile, authLoading, router]);
   const [savedRoomIds, setSavedRoomIds] = useState(INITIAL_SAVED_ROOMS);
   const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
   const [recentRooms, setRecentRooms] = useState<{ room: RoomUnit; lodge: Lodge }[]>([]);

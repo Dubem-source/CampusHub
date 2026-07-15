@@ -4,9 +4,10 @@ import React from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Menu, X, User, Heart, Clock, Bell, Home, Search, Users, Info, Phone, LogOut, GraduationCap } from 'lucide-react'
+import { Menu, X, Bell } from 'lucide-react'
 import { useSidebar } from '@/components/ui/sidebar'
 import { StudentSidebar } from '@/components/student/StudentSidebar'
+import { useAuth } from '@/hooks/use-auth'
 
 const links = [
   { href: '/', label: 'Home' },
@@ -17,77 +18,22 @@ const links = [
 ]
 
 function getInitials(name?: string) {
-  if (!name) return "ST";
+  if (!name) return "U";
   return name.trim().split(/\s+/).map(n => n[0]).join('').toUpperCase().slice(0, 2);
 }
 
 export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false)
   const pathname = usePathname()
-  const [agentData, setAgentData] = React.useState<{ full_name: string; photo: string } | null>(null);
-  const [studentData, setStudentData] = React.useState<{ full_name: string; avatar_url?: string } | null>(null);
-  const [userRole, setUserRole] = React.useState<string | null>(null);
-  const [notificationsCount, setNotificationsCount] = React.useState(0);
-  const { toggleSidebar, openMobile } = useSidebar();
+  const { toggleSidebar, openMobile } = useSidebar()
 
-  React.useEffect(() => {
-    const loadData = () => {
-      const role = localStorage.getItem("user_role");
-      setUserRole(role);
+  // ── Single source of truth: Firebase Auth + Firestore profile ──
+  const { user, profile } = useAuth();
 
-      const isAgentLoggedIn = localStorage.getItem("agent_logged_in") === "true";
-      const aData = localStorage.getItem("agent_data");
-      if (isAgentLoggedIn && aData && role === "agent") {
-        try {
-          setAgentData(JSON.parse(aData));
-        } catch (e) {
-          console.error("Failed to parse agent_data", e);
-        }
-      } else {
-        setAgentData(null);
-      }
-
-      const isStudentLoggedIn = localStorage.getItem("student_logged_in") === "true";
-      const sData = localStorage.getItem("student_data");
-      if (isStudentLoggedIn && sData && role === "student") {
-        try {
-          setStudentData(JSON.parse(sData));
-        } catch (e) {
-          console.error("Failed to parse student_data", e);
-        }
-      } else {
-        setStudentData(null);
-      }
-
-      // Sync unread notification count
-      const savedNotifications = localStorage.getItem("student_notifications");
-      if (savedNotifications) {
-        try {
-          const list = JSON.parse(savedNotifications);
-          const unreadCount = list.filter((n: any) => !n.read).length;
-          setNotificationsCount(unreadCount);
-        } catch (e) {
-          setNotificationsCount(0);
-        }
-      } else {
-        setNotificationsCount(2); // default mock unread count (two items are unread in the mock)
-      }
-    };
-
-    loadData();
-
-    window.addEventListener("storage", loadData);
-    window.addEventListener("agent-data-updated", loadData);
-    window.addEventListener("student-data-updated", loadData);
-    window.addEventListener("student-notifications-updated", loadData);
-
-    return () => {
-      window.removeEventListener("storage", loadData);
-      window.removeEventListener("agent-data-updated", loadData);
-      window.removeEventListener("student-data-updated", loadData);
-      window.removeEventListener("student-notifications-updated", loadData);
-    };
-  }, []);
+  const isAgent = !!user && profile?.role === "agent";
+  const isStudent = !!user && profile?.role === "student";
+  const displayName = profile?.fullName || user?.displayName || "";
+  const photoURL = user?.photoURL || "";
 
   React.useEffect(() => {
     setMobileMenuOpen(false);
@@ -121,79 +67,64 @@ export default function Header() {
         </nav>
 
         <div className="flex items-center gap-3">
-          {userRole === "agent" && agentData ? (
+          {isAgent ? (
             <>
-              {/* Desktop view profile dashboard link */}
+              {/* Desktop agent avatar link */}
               <Link
                 href="/dashboard/agent"
                 className="hidden items-center gap-2 rounded-full border border-black/10 dark:border-white/10 bg-white dark:bg-white/5 px-3 py-1.5 text-sm font-medium text-black dark:text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md md:inline-flex"
               >
-                <img
-                  src={agentData.photo || "https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y"}
-                  alt={agentData.full_name}
-                  className="w-6 h-6 rounded-full object-cover border border-gold"
-                />
-                <span className="max-w-[100px] truncate text-black dark:text-white">{agentData.full_name.split(" ")[0]}</span>
+                {photoURL ? (
+                  <img src={photoURL} alt={displayName} className="w-6 h-6 rounded-full object-cover border border-gold" />
+                ) : (
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-navy text-[10px] font-bold text-gold border border-gold/25">
+                    {getInitials(displayName)}
+                  </div>
+                )}
+                <span className="max-w-[100px] truncate">{displayName.split(" ")[0]}</span>
               </Link>
-              {/* Mobile view profile picture next to hamburger menu */}
-              <Link
-                href="/dashboard/agent"
-                className="inline-flex items-center justify-center rounded-full md:hidden"
-              >
-                <img
-                  src={agentData.photo || "https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y"}
-                  alt={agentData.full_name}
-                  className="w-8 h-8 rounded-full object-cover border border-gold"
-                />
+              {/* Mobile agent avatar */}
+              <Link href="/dashboard/agent" className="inline-flex items-center justify-center rounded-full md:hidden">
+                {photoURL ? (
+                  <img src={photoURL} alt={displayName} className="w-8 h-8 rounded-full object-cover border border-gold" />
+                ) : (
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-navy text-xs font-bold text-gold border border-gold/25">
+                    {getInitials(displayName)}
+                  </div>
+                )}
               </Link>
             </>
-          ) : userRole === "student" && studentData ? (
+          ) : isStudent ? (
             <>
               {/* Notification bell */}
               <Link
-                href="/dashboard/student?tab=notifications"
+                href="/dashboard/student"
                 className="relative flex h-9 w-9 items-center justify-center rounded-full border border-black/10 dark:border-white/10 bg-white dark:bg-white/5 text-gray-600 dark:text-gray-300 hover:text-navy dark:hover:text-white hover:bg-gray-50 dark:hover:bg-white/10 transition shadow-sm md:h-10 md:w-10"
               >
                 <Bell className="h-4 w-4 md:h-5 md:w-5" />
-                {notificationsCount > 0 && (
-                  <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-gold text-[9px] font-extrabold text-navy animate-pulse">
-                    {notificationsCount}
-                  </span>
-                )}
               </Link>
 
-              {/* Desktop view profile dashboard link */}
+              {/* Desktop student avatar link */}
               <Link
                 href="/dashboard/student"
                 className="hidden items-center gap-2 rounded-full border border-black/10 dark:border-white/10 bg-white dark:bg-white/5 px-3 py-1.5 text-sm font-medium text-black dark:text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md md:inline-flex"
               >
-                {studentData.avatar_url ? (
-                  <img
-                    src={studentData.avatar_url}
-                    alt={studentData.full_name}
-                    className="w-6 h-6 rounded-full object-cover border border-gold"
-                  />
+                {photoURL ? (
+                  <img src={photoURL} alt={displayName} className="w-6 h-6 rounded-full object-cover border border-gold" />
                 ) : (
                   <div className="flex h-6 w-6 items-center justify-center rounded-full bg-navy text-[10px] font-bold text-gold border border-gold/25">
-                    {getInitials(studentData.full_name)}
+                    {getInitials(displayName)}
                   </div>
                 )}
-                <span className="max-w-[100px] truncate text-black dark:text-white">{studentData.full_name.split(" ")[0]}</span>
+                <span className="max-w-[100px] truncate">{displayName.split(" ")[0]}</span>
               </Link>
-              {/* Mobile view profile picture next to hamburger menu */}
-              <Link
-                href="/dashboard/student"
-                className="inline-flex items-center justify-center rounded-full md:hidden"
-              >
-                {studentData.avatar_url ? (
-                  <img
-                    src={studentData.avatar_url}
-                    alt={studentData.full_name}
-                    className="w-8 h-8 rounded-full object-cover border border-gold"
-                  />
+              {/* Mobile student avatar */}
+              <Link href="/dashboard/student" className="inline-flex items-center justify-center rounded-full md:hidden">
+                {photoURL ? (
+                  <img src={photoURL} alt={displayName} className="w-8 h-8 rounded-full object-cover border border-gold" />
                 ) : (
                   <div className="flex h-8 w-8 items-center justify-center rounded-full bg-navy text-xs font-bold text-gold border border-gold/25">
-                    {getInitials(studentData.full_name)}
+                    {getInitials(displayName)}
                   </div>
                 )}
               </Link>
@@ -201,7 +132,7 @@ export default function Header() {
           ) : (
             <>
               <Link
-                href="/auth?mode=login"                  
+                href="/auth?mode=login"
                 className="hidden rounded-full border border-black/10 dark:border-white/10 bg-white dark:bg-white/5 px-4 py-2.5 text-sm font-medium text-black dark:text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md md:inline-flex"
               >
                 Login
@@ -214,7 +145,7 @@ export default function Header() {
               </Link>
             </>
           )}
-          {userRole === "student" && studentData ? (
+          {isStudent ? (
             <button
               type="button"
               aria-label="Toggle navigation menu"
@@ -252,13 +183,22 @@ export default function Header() {
             ))}
           </nav>
 
-          {userRole === "agent" && agentData ? (
+          {isAgent ? (
             <div className="mt-3">
               <Link
                 href="/dashboard/agent"
                 className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-[#e0b445] px-4 py-3 text-sm font-semibold text-black shadow-[0_10px_24px_rgba(224,180,69,0.28)] transition hover:bg-[#d7a93a]"
               >
                 Go to Agent Dashboard
+              </Link>
+            </div>
+          ) : isStudent ? (
+            <div className="mt-3">
+              <Link
+                href="/dashboard/student"
+                className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-[#e0b445] px-4 py-3 text-sm font-semibold text-black shadow-[0_10px_24px_rgba(224,180,69,0.28)] transition hover:bg-[#d7a93a]"
+              >
+                Go to Student Dashboard
               </Link>
             </div>
           ) : (
@@ -285,11 +225,11 @@ export default function Header() {
       {/* Spacer to prevent page content from going underneath the fixed header */}
       <div className="h-[82px] w-full shrink-0" />
 
-      {userRole === "student" && studentData && (
+      {isStudent && (
         <StudentSidebar
-          studentName={studentData.full_name}
-          studentAvatar={studentData.avatar_url}
-          notificationsCount={notificationsCount}
+          studentName={displayName}
+          studentAvatar={photoURL}
+          notificationsCount={0}
         />
       )}
     </>
