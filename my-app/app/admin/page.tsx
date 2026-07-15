@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { db } from "@/lib/firebase";
-import { doc, updateDoc } from "firebase/firestore";
+import { doc, updateDoc, collection, query, where, onSnapshot, getDocs } from "firebase/firestore";
 import {
   Building2,
   Users,
@@ -1905,192 +1905,103 @@ export default function AdminDashboard() {
   const pendingAppsCount = applications.filter(app => app.status === 'Pending').length;
   const pendingAgentSignups = applications.filter(app => app.id.startsWith('app-agent') && app.status === 'Pending');
 
-  // Synchronize with localStorage for custom signups
+  // Synchronize with Firestore Database for real-time applications, agents, and rooms sync
   React.useEffect(() => {
-    const syncFromLocalStorage = () => {
-      const saved = localStorage.getItem("agent_data");
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          const agentId = parsed.id || 'agent1';
+    // 1. Subscribe to agent applications and profiles from Firestore "users" collection
+    const usersQuery = query(collection(db, "users"), where("role", "==", "agent"));
+    const unsubscribeUsers = onSnapshot(usersQuery, (snapshot) => {
+      const dbApplications: AgentApplication[] = [];
+      const dbAgents: Agent[] = [];
 
-          // Sync listings notifications
-          if (parsed.listings && parsed.listings.length > 0) {
-            parsed.listings.forEach((l: any) => {
-              const notifId = `notif-list-${agentId}-${l.id}`;
-              setNotifications(nPrev => {
-                if (nPrev.some(n => n.id === notifId)) return nPrev;
-                return [
-                  {
-                    id: notifId,
-                    title: "Agent Listing Uploaded 🏠",
-                    body: `Agent ${parsed.full_name || 'Johnson Okonkwo'} uploaded a new listing "${l.building_name}" for review.`,
-                    timestamp: "Just now",
-                    read: false,
-                    type: "listing"
-                  },
-                  ...nPrev
-                ];
-              });
-            });
-          }
+      snapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        const uid = docSnap.id;
 
-          // 1. Sync Applications state
-          if (parsed.ninUploaded) {
-            setApplications(prev => {
-              const appId = `app-${parsed.id}`;
-              const exists = prev.some(app => app.id === appId);
-              if (exists) {
-                return prev.map(app =>
-                  app.id === appId
-                    ? { 
-                        ...app, 
-                        lodgesManaged: parsed.listings?.length || 0, 
-                        status: parsed.approved ? 'Approved' : (parsed.rejected ? 'Rejected' : 'Pending'),
-                        emailVerified: parsed.emailVerified !== undefined ? parsed.emailVerified : true,
-                        phoneVerified: parsed.phoneVerified !== undefined ? parsed.phoneVerified : false,
-                      }
-                    : app
-                );
-              } else {
-                const newApp: AgentApplication = {
-                  id: appId,
-                  name: parsed.full_name || 'Johnson Okonkwo',
-                  email: parsed.email || 'johnson@campushub.com',
-                  phone: parsed.phone || '08012345678',
-                  area: 'Eziobodo',
-                  lodgesManaged: parsed.listings?.length || 0,
-                  status: parsed.approved ? 'Approved' : (parsed.rejected ? 'Rejected' : 'Pending'),
-                  appliedDate: new Date().toISOString().split('T')[0],
-                  documentPlaceholder: parsed.ninImageName || 'NIN_document.jpg',
-                  ninImage: parsed.ninImage || undefined,
-                  emailVerified: parsed.emailVerified !== undefined ? parsed.emailVerified : true,
-                  phoneVerified: parsed.phoneVerified !== undefined ? parsed.phoneVerified : false,
-                };
-
-                // Add system notification for the new agent application
-                setNotifications(nPrev => {
-                  if (nPrev.some(n => n.id === `notif-app-${appId}`)) return nPrev;
-                  return [
-                    {
-                      id: `notif-app-${appId}`,
-                      title: "Agent Application Submitted 📋",
-                      body: `A new agent, ${parsed.full_name || 'Johnson Okonkwo'}, uploaded documents for review.`,
-                      timestamp: "Just now",
-                      read: false,
-                      type: "application"
-                    },
-                    ...nPrev
-                  ];
-                });
-
-                return [newApp, ...prev];
-              }
-            });
-          }
-
-          // 2. Sync Agents directory
-          const isSuspended = parsed.suspended === true;
-          const verificationStatus = isSuspended ? 'Suspended' : (parsed.approved && parsed.verified ? 'Verified' : 'Unverified');
-
-          setAgents(prev => {
-            const exists = prev.some(a => a.id === agentId);
-            if (exists) {
-              return prev.map(a => a.id === agentId ? {
-                ...a,
-                name: parsed.full_name || a.name,
-                email: parsed.email || a.email,
-                phone: parsed.phone || a.phone,
-                verificationStatus: verificationStatus,
-                listingsCount: parsed.listings?.length || 0,
-              } : a);
-            } else if (parsed.approved && parsed.verified) {
-              const newAgent: Agent = {
-                id: agentId,
-                name: parsed.full_name || 'Johnson Okonkwo',
-                email: parsed.email || 'johnson@campushub.com',
-                phone: parsed.phone || '08012345678',
-                verificationStatus: verificationStatus,
-                listingsCount: parsed.listings?.length || 0,
-                avgRating: 4.5,
-                joinedDate: parsed.joinedDate || '2026-06-19',
-              };
-              return [newAgent, ...prev];
-            }
-            return prev;
+        // Sync application queue if they uploaded verification docs
+        if (data.ninUploaded) {
+          dbApplications.push({
+            id: `app-agent-${uid}`,
+            name: data.fullName || "Agent",
+            email: data.email || "",
+            phone: data.phone || "",
+            area: data.area || "Eziobodo",
+            lodgesManaged: 0,
+            status: data.approved ? 'Approved' : (data.rejected ? 'Rejected' : 'Pending'),
+            appliedDate: data.createdAt ? data.createdAt.split('T')[0] : new Date().toISOString().split('T')[0],
+            documentPlaceholder: data.ninImageName || "verification_document.jpg",
+            ninImage: data.ninImage || undefined,
+            emailVerified: data.emailVerified !== undefined ? data.emailVerified : true,
+            phoneVerified: data.phoneVerified !== undefined ? data.phoneVerified : false,
           });
-
-          // 3. Sync Lodges (listings management) list
-          const isApproved = parsed.approved && parsed.verified;
-          setLodges(prev => {
-            // Keep all lodges that do not belong to this agent
-            let baseLodges = prev.filter(l => l.agentName !== parsed.full_name && !l.id.startsWith(`l-${agentId}-`));
-
-            if (isApproved && !isSuspended) {
-              const agentListings = parsed.listings || [];
-              const mappedListings = agentListings.map((l: any) => ({
-                id: `l-${agentId}-${l.id}`,
-                name: l.building_name,
-                agentName: parsed.full_name || 'Johnson Okonkwo',
-                area: l.area,
-                roomType: l.room_type,
-                status: l.availability === 'available' ? 'Active' : 'Hidden',
-                createdDate: l.created_at || new Date().toISOString().split('T')[0],
-                availability: l.availability || 'available',
-                price: l.price,
-                entryPrice: l.entryPrice,
-                description: l.description,
-                amenities: l.amenities,
-                photos: l.photos,
-              }));
-              return [...mappedListings, ...baseLodges];
-            }
-            return baseLodges;
-          });
-
-        } catch (e) {
-          console.error("Failed to parse agent_data in admin page:", e);
         }
-      }
-    };
 
+        // Sync active verified agents directory
+        if (data.approved) {
+          dbAgents.push({
+            id: uid,
+            name: data.fullName || "Agent",
+            email: data.email || "",
+            phone: data.phone || "",
+            verificationStatus: data.suspended ? 'Suspended' : 'Verified',
+            listingsCount: 0,
+            avgRating: 4.5,
+            joinedDate: data.createdAt ? data.createdAt.split('T')[0] : '2026-06-19',
+          });
+        }
+      });
+
+      // Update states
+      setApplications(dbApplications);
+      setAgents(dbAgents);
+    }, (error) => {
+      console.error("Firestore users subscription error:", error);
+    });
+
+    // 2. Subscribe to room listings from Firestore "rooms" collection
+    const roomsQuery = query(collection(db, "rooms"));
+    const unsubscribeRooms = onSnapshot(roomsQuery, (roomsSnap) => {
+      const dbRooms: Lodge[] = [];
+      roomsSnap.forEach((roomDoc) => {
+        const rData = roomDoc.data();
+        dbRooms.push({
+          id: roomDoc.id,
+          name: rData.building_name || "Lodge Unit",
+          agentName: rData.agentName || "Agent",
+          area: rData.area || "Eziobodo",
+          roomType: rData.roomType || "Self-contain",
+          status: rData.availability === "available" ? "Active" : "Hidden",
+          createdDate: rData.created_at || new Date().toISOString().split("T")[0],
+          availability: rData.availability || "available",
+          price: Number(rData.price || 0),
+          entryPrice: Number(rData.entryPrice || 0),
+          description: rData.description || "",
+          amenities: rData.amenities || [],
+          photos: rData.photos || [],
+        });
+      });
+      setLodges(dbRooms);
+    }, (error) => {
+      console.error("Firestore rooms subscription error:", error);
+    });
+
+    // 3. Sync local storage services and mock events
     const syncMarketplaceAndServices = () => {
-      // Sync notifications list from localStorage
       const savedAdminNotifs = localStorage.getItem("admin_notifications");
       if (savedAdminNotifs) {
         try {
           setNotifications(JSON.parse(savedAdminNotifs));
         } catch(e) {}
       }
-
-      // Sync applications list
       setServiceApplications(getServiceApplications());
-
-      // Sync email pending simulation
-      const emailPending = localStorage.getItem("service_application_email_pending");
-      if (emailPending) {
-        try {
-          const details = JSON.parse(emailPending);
-          setSimulatedEmailDetails(details);
-          setIsEmailModalOpen(true);
-          localStorage.removeItem("service_application_email_pending");
-        } catch(e) {}
-      }
     };
 
-    syncFromLocalStorage();
     syncMarketplaceAndServices();
-
-    window.addEventListener("storage", syncFromLocalStorage);
-    window.addEventListener("focus", syncFromLocalStorage);
-    window.addEventListener("agent-data-updated", syncFromLocalStorage);
     window.addEventListener("admin-notifications-updated", syncMarketplaceAndServices);
     window.addEventListener("service-applications-updated", syncMarketplaceAndServices);
 
     return () => {
-      window.removeEventListener("storage", syncFromLocalStorage);
-      window.removeEventListener("focus", syncFromLocalStorage);
-      window.removeEventListener("agent-data-updated", syncFromLocalStorage);
+      unsubscribeUsers();
+      unsubscribeRooms();
       window.removeEventListener("admin-notifications-updated", syncMarketplaceAndServices);
       window.removeEventListener("service-applications-updated", syncMarketplaceAndServices);
     };
