@@ -106,11 +106,17 @@ function AuthContent() {
       }
 
       if (userRole === "agent") {
+        // ── Clear any stale student session to prevent cross-role leakage ──
+        localStorage.removeItem("student_logged_in");
+        localStorage.removeItem("student_data");
+
+        // ── Set agent session ──
         localStorage.setItem("agent_logged_in", "true");
+        localStorage.setItem("user_role", "agent");
         const savedAgent = {
           id: user.uid,
-          full_name: userData?.fullName || "Johnson Okonkwo",
-          phone: userData?.phone || "08012345678",
+          full_name: userData?.fullName || user.displayName || "Agent",
+          phone: userData?.phone || "",
           email: user.email,
           emailVerified: user.emailVerified,
           phoneVerified: userData?.phoneVerified || false,
@@ -119,19 +125,28 @@ function AuthContent() {
           ninUploaded: userData?.ninUploaded || false,
           ninImage: userData?.ninImage || null,
           ninImageName: userData?.ninImageName || null,
+          photo: userData?.photo || user.photoURL || "",
         };
         localStorage.setItem("agent_data", JSON.stringify(savedAgent));
         window.dispatchEvent(new Event("agent-data-updated"));
         router.push("/dashboard/agent");
       } else {
+        // ── Clear any stale agent session to prevent cross-role leakage ──
+        localStorage.removeItem("agent_logged_in");
+        localStorage.removeItem("agent_data");
+
+        // ── Set student session ──
         localStorage.setItem("student_logged_in", "true");
+        localStorage.setItem("user_role", "student");
         const savedStudent = {
           id: user.uid,
-          full_name: userData?.fullName || "Student User",
+          full_name: userData?.fullName || user.displayName || "Student",
           phone: userData?.phone || "",
           email: user.email,
+          avatar_url: userData?.photoURL || user.photoURL || "",
         };
         localStorage.setItem("student_data", JSON.stringify(savedStudent));
+        window.dispatchEvent(new Event("student-data-updated"));
         router.push("/dashboard/student");
       }
     } catch (err: any) {

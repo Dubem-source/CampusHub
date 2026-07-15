@@ -76,8 +76,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = async () => {
     try {
       await signOut(auth);
+      // ── Clear all role session keys ──
       localStorage.removeItem("agent_logged_in");
+      localStorage.removeItem("agent_data");
       localStorage.removeItem("student_logged_in");
+      localStorage.removeItem("student_data");
+      localStorage.removeItem("user_role");
       localStorage.removeItem("admin_logged_in");
     } catch (err) {
       console.error("Sign out error:", err);

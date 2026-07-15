@@ -262,6 +262,9 @@ export function StudentSidebar({
               onClick={onLogout || (() => {
                 setOpenMobile(false);
                 localStorage.removeItem("student_logged_in");
+                localStorage.removeItem("student_data");
+                localStorage.removeItem("agent_logged_in");
+                localStorage.removeItem("agent_data");
                 localStorage.removeItem("user_role");
                 window.dispatchEvent(new Event("student-data-updated"));
                 window.location.href = "/";
