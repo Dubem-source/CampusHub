@@ -5,6 +5,12 @@ import Link from "next/link";
 import { Heart, Star, BadgeCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+import { useAuth } from "@/hooks/use-auth";
+import { db } from "@/lib/firebase";
+import { collection, query, where, getDocs, addDoc, deleteDoc, doc, onSnapshot } from "firebase/firestore";
+import { RoomUnit, Lodge } from "@/lib/lodge-data";
+import { toast } from "react-hot-toast";
+
 type LodgeCardProps = {
   name: string;
   area?: string;
@@ -17,6 +23,9 @@ type LodgeCardProps = {
   roomType?: string;
   isOfficial?: boolean;
   hideHeart?: boolean;
+  roomId?: string;
+  room?: RoomUnit;
+  lodge?: Lodge;
 };
 
 export default function LodgeCard({
@@ -31,13 +40,87 @@ export default function LodgeCard({
   roomType,
   isOfficial,
   hideHeart,
+  roomId,
+  room,
+  lodge,
 }: LodgeCardProps) {
+  const { user, profile } = useAuth();
   const [isSaved, setIsSaved] = useState(false);
+  const [saveDocId, setSaveDocId] = useState<string | null>(null);
 
-  const handleToggleSave = (e: React.MouseEvent) => {
+  // Subscribe to the saved state of this room for the logged-in student
+  React.useEffect(() => {
+    if (!user || !roomId || profile?.role !== "student") {
+      setIsSaved(false);
+      setSaveDocId(null);
+      return;
+    }
+
+    const q = query(
+      collection(db, "savedRooms"),
+      where("studentId", "==", user.uid),
+      where("room.id", "==", roomId)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      if (!snapshot.empty) {
+        setIsSaved(true);
+        setSaveDocId(snapshot.docs[0].id);
+      } else {
+        setIsSaved(false);
+        setSaveDocId(null);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [user, roomId, profile]);
+
+  const handleToggleSave = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsSaved(!isSaved);
+
+    if (!user) {
+      toast.error("Please log in to save rooms.");
+      return;
+    }
+
+    if (profile?.role !== "student") {
+      toast.error("Only students can save rooms.");
+      return;
+    }
+
+    try {
+      if (isSaved && saveDocId) {
+        // Unsave
+        await deleteDoc(doc(db, "savedRooms", saveDocId));
+        toast.success("Removed from saved rooms");
+      } else if (room) {
+        // Save
+        await addDoc(collection(db, "savedRooms"), {
+          studentId: user.uid,
+          room: room,
+          lodge: lodge || {
+            slug: room.lodgeSlug || "",
+            name: name,
+            area: room.area || "",
+            landmark: "",
+            agentId: room.agentId || "",
+            agentName: "Agent",
+            agentPhoto: "",
+            agentPhone: "",
+            rating: rating,
+            roomsCount: 1,
+            buildingAmenities: [],
+            isOfficial: isOfficial,
+          },
+          savedAt: new Date().toISOString(),
+        });
+        toast.success("Saved to your dashboard!");
+      }
+    } catch (err) {
+      console.error("Error saving room:", err);
+      toast.error("Failed to save. Please try again.");
+    }
   };
 
   const displayBadge = isOfficial ? (

@@ -29,7 +29,6 @@ import {
   formatNaira,
   Lodge,
   RoomUnit,
-  lodgeReviews,
   type Review,
 } from "../../../../../lib/lodge-data";
 
@@ -226,12 +225,9 @@ export default function RoomDetailPage() {
 
   useEffect(() => {
     if (roomContext) {
-      // Use setTimeout to ensure the update happens in the next tick,
-      // resolving the 'setState in effect' lint error.
-      const timer = setTimeout(() => {
-        setLocalReviews(lodgeReviews[roomContext.lodge.slug] ?? []);
-      }, 0);
-      return () => clearTimeout(timer);
+      // Reviews are fetched from Firestore `reviews` sub-collection
+      // For now, start with an empty array — no hardcoded mock reviews
+      setLocalReviews([]);
     }
   }, [roomContext]);
 

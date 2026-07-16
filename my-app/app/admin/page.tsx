@@ -76,14 +76,10 @@ import { toast } from "react-hot-toast";
 import { cn } from "@/lib/utils";
 
 import {
-  MOCK_AGENT_APPLICATIONS,
-  MOCK_AGENTS,
-  MOCK_LODGES,
-  MOCK_REPORTS,
-  AgentApplication,
-  Agent,
-  Lodge,
-  Report,
+  type AgentApplication,
+  type Agent,
+  type Lodge,
+  type Report,
 } from "@/lib/admin-mock-data";
 
 import {
@@ -104,20 +100,26 @@ const OverviewTab = ({
   lodges,
   pendingAppsCount,
   reports,
-  setActiveTab
+  setActiveTab,
+  totalStudents,
+  totalRooms,
+  recentActivity,
 }: {
   lodges: Lodge[],
   pendingAppsCount: number,
   reports: Report[],
-  setActiveTab: (t: string) => void
+  setActiveTab: (t: string) => void,
+  totalStudents: number,
+  totalRooms: number,
+  recentActivity: { event: string; user: string; time: string; status: string }[],
 }) => (
   <div className="space-y-6">
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       {[
-        { label: "Total Listings", value: lodges.length, icon: Building2, trend: "+12% this month", trendColor: "text-emerald-500" },
-        { label: "Pending Agents", value: pendingAppsCount, icon: Users, trend: "Needs review", trendColor: "text-amber-500" },
-        { label: "Total Students", value: "1,420", icon: GraduationCap, trend: "+5% increase", trendColor: "text-emerald-500" },
-        { label: "Open Reports", value: reports.filter(r => r.status === 'Pending').length, icon: AlertTriangle, trend: "Requires action", trendColor: "text-rose-500" },
+        { label: "Total Listings", value: totalRooms, icon: Building2, trend: `${totalRooms} active rooms`, trendColor: "text-emerald-500" },
+        { label: "Pending Agents", value: pendingAppsCount, icon: Users, trend: pendingAppsCount > 0 ? "Needs review" : "All clear", trendColor: pendingAppsCount > 0 ? "text-amber-500" : "text-emerald-500" },
+        { label: "Total Students", value: totalStudents, icon: GraduationCap, trend: `${totalStudents} registered`, trendColor: "text-emerald-500" },
+        { label: "Open Reports", value: reports.filter(r => r.status === 'Pending').length, icon: AlertTriangle, trend: reports.filter(r => r.status === 'Pending').length > 0 ? "Requires action" : "No open reports", trendColor: reports.filter(r => r.status === 'Pending').length > 0 ? "text-rose-500" : "text-emerald-500" },
       ].map((stat, i) => (
         <Card key={i} className="border-none shadow-sm hover:shadow-md transition-shadow duration-200">
           <CardContent className="p-6">
@@ -144,25 +146,24 @@ const OverviewTab = ({
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {[
-              { event: "New agent application", user: "Kelechi Uche", time: "2 hours ago", status: "Pending" },
-              { event: "Lodge reported", user: "Chiamaka Okafor", time: "5 hours ago", status: "Flagged" },
-              { event: "Listing approved", user: "Official CampusHub", time: "Yesterday", status: "Success" },
-              { event: "Agent suspended", user: "Blessing Udoh", time: "2 days ago", status: "Action Taken" },
-            ].map((item, i) => (
-              <div key={i} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-white/5 rounded-xl">
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 bg-navy dark:bg-gold rounded-full flex items-center justify-center text-white dark:text-navy font-bold">
-                    {item.user[0]}
+            {recentActivity.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">No recent activity yet. Events will appear here as agents sign up and submit listings.</p>
+            ) : (
+              recentActivity.map((item, i) => (
+                <div key={i} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-white/5 rounded-xl">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 bg-navy dark:bg-gold rounded-full flex items-center justify-center text-white dark:text-navy font-bold">
+                      {item.user[0]}
+                    </div>
+                    <div>
+                      <p className="font-semibold text-sm">{item.event}</p>
+                      <p className="text-xs text-muted-foreground">by {item.user} • {item.time}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-semibold text-sm">{item.event}</p>
-                    <p className="text-xs text-muted-foreground">by {item.user} • {item.time}</p>
-                  </div>
+                  <Badge variant="outline" className="bg-white dark:bg-navy/20">{item.status}</Badge>
                 </div>
-                <Badge variant="outline" className="bg-white dark:bg-navy/20">{item.status}</Badge>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </CardContent>
       </Card>
@@ -1700,48 +1701,7 @@ export default function AdminDashboard() {
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [simulatedEmailDetails, setSimulatedEmailDetails] = useState<{ to: string; subject: string; body: string } | null>(null);
-  const [notifications, setNotifications] = useState<AdminNotification[]>([
-    {
-      id: "notif-1",
-      title: "Agent Application Submitted 📋",
-      body: 'A new agent, Johnson Okonkwo, has uploaded verification documents for approval.',
-      timestamp: "Just now",
-      read: false,
-      type: "application"
-    },
-    {
-      id: "notif-2",
-      title: "New Report Filed 🚨",
-      body: 'A student reported "Umuchima Heights" for pricing discrepancies. Review required.',
-      timestamp: "2 hours ago",
-      read: false,
-      type: "report"
-    },
-    {
-      id: "notif-3",
-      title: "Agent Listing Uploaded 🏠",
-      body: 'Agent Legacy Lodge uploaded a new mini-flat listing "Legacy Court" for review.',
-      timestamp: "1 day ago",
-      read: true,
-      type: "listing"
-    },
-    {
-      id: "notif-4",
-      title: "New Student Registered 🎓",
-      body: 'A new student, Dubem Obi, just signed up using a FUTO campus email address.',
-      timestamp: "2 days ago",
-      read: true,
-      type: "signup"
-    },
-    {
-      id: "notif-5",
-      title: "Listing Booked/Rented 🔑",
-      body: 'Lodge "Umuchima Heights" has been successfully marked as rented by its agent.',
-      timestamp: "3 days ago",
-      read: true,
-      type: "listing"
-    }
-  ]);
+  const [notifications, setNotifications] = useState<AdminNotification[]>([]);
 
   // Official listing states
   const [editingOfficialLodge, setEditingOfficialLodge] = useState<Lodge | null>(null);
@@ -1806,11 +1766,17 @@ export default function AdminDashboard() {
     }
   }, []);
 
-  // Local state for mock interactions
-  const [applications, setApplications] = useState<AgentApplication[]>(MOCK_AGENT_APPLICATIONS);
-  const [agents, setAgents] = useState<Agent[]>(MOCK_AGENTS);
-  const [lodges, setLodges] = useState<Lodge[]>(MOCK_LODGES);
-  const [reports, setReports] = useState<Report[]>(MOCK_REPORTS);
+  // All data sourced from Firestore — no mock arrays
+  const [applications, setApplications] = useState<AgentApplication[]>([]);
+  const [agents, setAgents] = useState<Agent[]>([]);
+  const [lodges, setLodges] = useState<Lodge[]>([]);
+  const [reports, setReports] = useState<Report[]>([]);
+
+  // Live analytics counts from Firestore
+  const [totalStudents, setTotalStudents] = useState(0);
+  const [totalAgents, setTotalAgents] = useState(0);
+  const [totalRooms, setTotalRooms] = useState(0);
+  const [recentActivity, setRecentActivity] = useState<{ event: string; user: string; time: string; status: string }[]>([]);
 
   const handleAddOfficialClick = () => {
     setNewOfficialForm({
@@ -1905,61 +1871,78 @@ export default function AdminDashboard() {
   const pendingAppsCount = applications.filter(app => app.status === 'Pending').length;
   const pendingAgentSignups = applications.filter(app => app.id.startsWith('app-agent') && app.status === 'Pending');
 
-  // Synchronize with Firestore Database for real-time applications, agents, and rooms sync
+  // Synchronize with Firestore Database — real-time subscriptions for all admin data
   React.useEffect(() => {
-    // 1. Subscribe to agent applications and profiles from Firestore "users" collection
-    const usersQuery = query(collection(db, "users"), where("role", "==", "agent"));
-    const unsubscribeUsers = onSnapshot(usersQuery, (snapshot) => {
+    // 1. Subscribe to ALL users — derive counts + agent applications + verified agents
+    const allUsersUnsub = onSnapshot(collection(db, "users"), (snapshot) => {
       const dbApplications: AgentApplication[] = [];
       const dbAgents: Agent[] = [];
+      const activityFeed: { event: string; user: string; time: string; status: string }[] = [];
+      let studentCount = 0;
+      let agentCount = 0;
 
       snapshot.forEach((docSnap) => {
         const data = docSnap.data();
         const uid = docSnap.id;
 
-        // Sync application queue if they uploaded verification docs
-        if (data.ninUploaded) {
-          dbApplications.push({
-            id: `app-agent-${uid}`,
-            name: data.fullName || "Agent",
-            email: data.email || "",
-            phone: data.phone || "",
-            area: data.area || "Eziobodo",
-            lodgesManaged: 0,
-            status: data.approved ? 'Approved' : (data.rejected ? 'Rejected' : 'Pending'),
-            appliedDate: data.createdAt ? data.createdAt.split('T')[0] : new Date().toISOString().split('T')[0],
-            documentPlaceholder: data.ninImageName || "verification_document.jpg",
-            ninImage: data.ninImage || undefined,
-            emailVerified: data.emailVerified !== undefined ? data.emailVerified : true,
-            phoneVerified: data.phoneVerified !== undefined ? data.phoneVerified : false,
-          });
-        }
+        if (data.role === "student") studentCount++;
 
-        // Sync active verified agents directory
-        if (data.approved) {
-          dbAgents.push({
-            id: uid,
-            name: data.fullName || "Agent",
-            email: data.email || "",
-            phone: data.phone || "",
-            verificationStatus: data.suspended ? 'Suspended' : 'Verified',
-            listingsCount: 0,
-            avgRating: 4.5,
-            joinedDate: data.createdAt ? data.createdAt.split('T')[0] : '2026-06-19',
-          });
+        if (data.role === "agent") {
+          agentCount++;
+
+          // Build agent applications queue from agents who uploaded verification docs
+          if (data.ninUploaded) {
+            dbApplications.push({
+              id: `app-agent-${uid}`,
+              name: data.fullName || "Agent",
+              email: data.email || "",
+              phone: data.phone || "",
+              area: data.area || "Eziobodo",
+              lodgesManaged: 0,
+              status: data.approved ? 'Approved' : (data.rejected ? 'Rejected' : 'Pending'),
+              appliedDate: data.createdAt ? data.createdAt.split('T')[0] : new Date().toISOString().split('T')[0],
+              documentPlaceholder: data.ninImageName || "verification_document.jpg",
+              ninImage: data.ninImage || undefined,
+              emailVerified: data.emailVerified !== undefined ? data.emailVerified : true,
+              phoneVerified: data.phoneVerified !== undefined ? data.phoneVerified : false,
+            });
+
+            // Show in recent activity if pending
+            if (!data.approved && !data.rejected) {
+              activityFeed.push({
+                event: "New agent application",
+                user: data.fullName || "Agent",
+                time: data.createdAt ? new Date(data.createdAt).toLocaleDateString() : "Recently",
+                status: "Pending"
+              });
+            }
+          }
+
+          // Build verified agents directory
+          if (data.approved) {
+            dbAgents.push({
+              id: uid,
+              name: data.fullName || "Agent",
+              email: data.email || "",
+              phone: data.phone || "",
+              verificationStatus: data.suspended ? 'Suspended' : 'Verified',
+              listingsCount: 0,
+              avgRating: 4.5,
+              joinedDate: data.createdAt ? data.createdAt.split('T')[0] : new Date().toISOString().split('T')[0],
+            });
+          }
         }
       });
 
-      // Update states
       setApplications(dbApplications);
       setAgents(dbAgents);
-    }, (error) => {
-      console.error("Firestore users subscription error:", error);
-    });
+      setTotalStudents(studentCount);
+      setTotalAgents(agentCount);
+      setRecentActivity(activityFeed.slice(0, 5));
+    }, (err) => console.error("Firestore users subscription error:", err));
 
-    // 2. Subscribe to room listings from Firestore "rooms" collection
-    const roomsQuery = query(collection(db, "rooms"));
-    const unsubscribeRooms = onSnapshot(roomsQuery, (roomsSnap) => {
+    // 2. Subscribe to rooms/listings
+    const roomsUnsub = onSnapshot(collection(db, "rooms"), (roomsSnap) => {
       const dbRooms: Lodge[] = [];
       roomsSnap.forEach((roomDoc) => {
         const rData = roomDoc.data();
@@ -1980,30 +1963,44 @@ export default function AdminDashboard() {
         });
       });
       setLodges(dbRooms);
-    }, (error) => {
-      console.error("Firestore rooms subscription error:", error);
-    });
+      setTotalRooms(roomsSnap.size);
+    }, (err) => console.error("Firestore rooms subscription error:", err));
 
-    // 3. Sync local storage services and mock events
-    const syncMarketplaceAndServices = () => {
-      const savedAdminNotifs = localStorage.getItem("admin_notifications");
-      if (savedAdminNotifs) {
-        try {
-          setNotifications(JSON.parse(savedAdminNotifs));
-        } catch(e) {}
-      }
+    // 3. Subscribe to student reports
+    const reportsUnsub = onSnapshot(
+      query(collection(db, "reports"), where("status", "!=", "__deleted__")),
+      (reportsSnap) => {
+        const dbReports: Report[] = [];
+        reportsSnap.forEach((docSnap) => {
+          const d = docSnap.data();
+          dbReports.push({
+            id: docSnap.id,
+            reporter: d.reporterName || "Student",
+            entityType: d.entityType || "Lodge",
+            entityId: d.entityId || "",
+            entityName: d.entityName || "",
+            reason: d.reason || "",
+            status: d.status || "Pending",
+            date: d.createdAt ? d.createdAt.split('T')[0] : new Date().toISOString().split('T')[0],
+          });
+        });
+        setReports(dbReports);
+      },
+      (err) => console.error("Firestore reports subscription error:", err)
+    );
+
+    // 4. Sync service marketplace data
+    const syncServices = () => {
       setServiceApplications(getServiceApplications());
     };
-
-    syncMarketplaceAndServices();
-    window.addEventListener("admin-notifications-updated", syncMarketplaceAndServices);
-    window.addEventListener("service-applications-updated", syncMarketplaceAndServices);
+    syncServices();
+    window.addEventListener("service-applications-updated", syncServices);
 
     return () => {
-      unsubscribeUsers();
-      unsubscribeRooms();
-      window.removeEventListener("admin-notifications-updated", syncMarketplaceAndServices);
-      window.removeEventListener("service-applications-updated", syncMarketplaceAndServices);
+      allUsersUnsub();
+      roomsUnsub();
+      reportsUnsub();
+      window.removeEventListener("service-applications-updated", syncServices);
     };
   }, []);
 
@@ -2029,68 +2026,23 @@ export default function AdminDashboard() {
     setIsNotificationOpen(false);
   };
 
-  // Actions
+  // Actions — Firestore is the source of truth; onSnapshot auto-updates the UI
   const handleApproveApp = async (id: string) => {
-    setApplications(prev => prev.map(app => app.id === id ? { ...app, status: 'Approved' } : app));
-
-    const app = applications.find(a => a.id === id);
-    if (app) {
-      const newAgent: Agent = {
-        id: `agent-${app.id}`,
-        name: app.name,
-        email: app.email,
-        phone: app.phone,
-        verificationStatus: 'Verified',
-        listingsCount: 0,
-        avgRating: 0,
-        joinedDate: new Date().toISOString().split('T')[0]
-      };
-      setAgents(prev => {
-        if (prev.some(a => a.email === app.email)) return prev;
-        return [...prev, newAgent];
+    const cleanUid = id.replace("app-agent-", "").replace("app-", "");
+    try {
+      await updateDoc(doc(db, "users", cleanUid), {
+        approved: true,
+        verified: true,
+        rejected: false
       });
-
-      // Update Firestore user document
-      const cleanUid = id.replace("app-agent-", "").replace("app-", "");
-      try {
-        await updateDoc(doc(db, "users", cleanUid), {
-          approved: true,
-          verified: true,
-          rejected: false
-        });
-      } catch (err) {
-        console.error("Firestore user approval update error:", err);
-      }
-
-      // Update localStorage if it's the registered onboarding agent
-      if (id.startsWith('app-agent')) {
-        const saved = localStorage.getItem("agent_data");
-        if (saved) {
-          try {
-            const parsed = JSON.parse(saved);
-            const updated = {
-              ...parsed,
-              approved: true,
-              verified: true,
-              rejected: false
-            };
-            localStorage.setItem("agent_data", JSON.stringify(updated));
-            window.dispatchEvent(new Event("storage"));
-            window.dispatchEvent(new Event("agent-data-updated"));
-          } catch (e) {
-            console.error(e);
-          }
-        }
-      }
+      toast.success("Application approved — agent is now verified.");
+    } catch (err) {
+      console.error("Firestore user approval error:", err);
+      toast.error("Failed to approve. Please try again.");
     }
-
-    toast.success("Application approved successfully");
   };
 
   const handleRejectApp = async (id: string) => {
-    setApplications(prev => prev.map(app => app.id === id ? { ...app, status: 'Rejected' } : app));
-
-    // Update Firestore user document
     const cleanUid = id.replace("app-agent-", "").replace("app-", "");
     try {
       await updateDoc(doc(db, "users", cleanUid), {
@@ -2098,32 +2050,11 @@ export default function AdminDashboard() {
         verified: false,
         rejected: true
       });
+      toast.error("Application rejected.");
     } catch (err) {
-      console.error("Firestore user rejection update error:", err);
+      console.error("Firestore user rejection error:", err);
+      toast.error("Failed to reject. Please try again.");
     }
-
-    // Update localStorage if it's the registered onboarding agent
-    if (id.startsWith('app-agent')) {
-      const saved = localStorage.getItem("agent_data");
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          const updated = {
-            ...parsed,
-            approved: false,
-            verified: false,
-            rejected: true
-          };
-          localStorage.setItem("agent_data", JSON.stringify(updated));
-          window.dispatchEvent(new Event("storage"));
-          window.dispatchEvent(new Event("agent-data-updated"));
-        } catch (e) {
-          console.error(e);
-        }
-      }
-    }
-
-    toast.error("Application rejected");
   };
 
   const handleApproveServiceApp = (id: string) => {
@@ -2179,13 +2110,13 @@ export default function AdminDashboard() {
     return (
       <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-white dark:bg-[#08131e] transition-colors duration-300">
         <div className="relative flex flex-col items-center space-y-4">
-          <div className="relative h-20 w-20 rounded-full bg-gold/10 p-2 flex items-center justify-center shadow-lg border border-gold/20 animate-pulse">
+          <div className="relative h-32 w-32 flex items-center justify-center animate-pulse">
             <Image
-              src="/image/Campus-Hub.png"
+              src="/image/Campus-Hub2.png"
               alt="CampusHub Logo"
-              width={64}
-              height={64}
-              className="rounded-full object-contain"
+              width={120}
+              height={120}
+              className="object-contain"
             />
           </div>
           <div className="text-center space-y-2">
@@ -2221,7 +2152,7 @@ export default function AdminDashboard() {
               alt="Campus-Hub Logo"
               width={32}
               height={32}
-              className="rounded-full bg-white dark:bg-white/10 p-0.5"
+              className="object-contain"
             />
             <span className="text-lg font-bold tracking-tight">
               Campus<span className="text-[#C9952A]">Hub</span>
@@ -2489,6 +2420,9 @@ export default function AdminDashboard() {
                   pendingAppsCount={pendingAppsCount}
                   reports={reports}
                   setActiveTab={setActiveTab}
+                  totalStudents={totalStudents}
+                  totalRooms={totalRooms}
+                  recentActivity={recentActivity}
                 />
               )}
               {activeTab === "applications" && (

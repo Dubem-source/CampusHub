@@ -1,0 +1,18 @@
+# Root project gitignore
+.venv/
+.ipynb_checkpoints/
+__pycache__/
+*.pyc
+
+# Ignore Next.js subfolder dependencies
+my-app/node_modules/
+my-app/.next/
+my-app/out/
+my-app/build/
+my-app/.env*.local
+my-app/.vercel
+
+# IDE and system files
+.DS_Store
+Thumbs.db
+*.log

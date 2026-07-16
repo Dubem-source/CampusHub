@@ -43,13 +43,13 @@ export default function Header() {
     <>
       <header className="fixed top-0 left-0 right-0 z-50 border-b border-black/5 dark:border-white/10 bg-white/80 dark:bg-navy/80 backdrop-blur-xl transition-colors duration-300">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 md:px-8 lg:px-10">
-        <Link href="/" className="flex items-center gap-2">
+        <Link href="/" className="flex items-center gap-1">
           <Image
-            src="/image/Campus-Hub.png"
+            src="/image/Campus-Hub2.png"
             alt="Campus-Hub Logo"
-            width={50}
-            height={50}
-            className="rounded-full object-contain bg-white p-0.5 border border-black/5 shadow-sm"
+            width={56}
+            height={56}
+            className="object-contain flex-shrink-0"
           />
           <span className="text-xl font-bold text-black dark:text-white tracking-tight">Campus<span className="text-gold">Hub</span></span>
         </Link>

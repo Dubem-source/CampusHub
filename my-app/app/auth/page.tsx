@@ -20,9 +20,9 @@ import {
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { auth, db } from "@/lib/firebase";
-import { 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword, 
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
   sendEmailVerification,
   signOut,
   updateProfile
@@ -192,11 +192,9 @@ function AuthContent() {
 
         <div className="text-center max-w-lg z-10 w-full flex flex-col items-center">
           <Link href="/" className="flex flex-col items-center mb-10 group hover:opacity-95 transition-all">
-            {/* Glowing Logo Container */}
-            <div className="relative mb-6">
-              <div className="absolute inset-0 bg-[#C9952A]/20 rounded-full blur-md group-hover:blur-lg transition-all duration-300" />
-              <div className="relative w-24 h-24 bg-white rounded-full flex items-center justify-center shadow-2xl p-1.5 overflow-hidden group-hover:scale-105 transition-transform duration-300">
-                <img src="/image/Campus-Hub.png" alt="CampusHub Logo" className="w-full h-full object-contain rounded-full" />
+            <div className="relative mb-0.5">
+              <div className="relative w-32 h-32 flex items-center justify-center group-hover:scale-105 transition-transform duration-300">
+                <img src="/image/Campus-Hub2.png" alt="CampusHub Logo" className="w-full h-full object-contain" />
               </div>
             </div>
             <h1 className="text-4xl md:text-5xl font-extrabold text-white tracking-tight mb-3">
@@ -255,9 +253,9 @@ function AuthContent() {
 
       {/* --- Mobile Top Banner --- */}
       <div className="lg:hidden bg-[#0f1e2d] p-6 text-center border-b border-white/10">
-        <Link href="/" className="inline-flex items-center justify-center gap-2.5 hover:opacity-90 transition-opacity">
-          <div className="w-7 h-7 bg-white rounded-full p-0.5 overflow-hidden flex items-center justify-center">
-            <img src="/image/Campus-Hub.png" alt="CampusHub Logo" className="w-full h-full object-contain rounded-full" />
+        <Link href="/" className="inline-flex items-center justify-center gap-1 hover:opacity-90 transition-opacity">
+          <div className="w-12 h-12 flex items-center justify-center">
+            <img src="/image/Campus-Hub2.png" alt="CampusHub Logo" className="w-full h-full object-contain" />
           </div>
           <h1 className="text-xl font-bold text-white tracking-tight">
             Campus<span className="text-[#C9952A]">Hub</span>
@@ -269,16 +267,16 @@ function AuthContent() {
       <div className="flex-1 flex items-center justify-center p-8 lg:p-12 overflow-y-auto">
         <div className="w-full max-w-[440px]">
           <div className="mb-6">
-            <Link 
-              href="/" 
+            <Link
+              href="/"
               className="inline-flex items-center gap-2 text-sm font-semibold text-gray-400 hover:text-[#C9952A] transition-colors"
             >
               <ArrowLeft className="h-4 w-4" /> Back to Home
             </Link>
           </div>
-          
+
           {isSuccess ? (
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               className="text-center"
@@ -288,7 +286,7 @@ function AuthContent() {
               </div>
               <h2 className="text-3xl font-bold text-[#0f1e2d] mb-4 tracking-tight">Check your email</h2>
               <p className="text-gray-500 mb-8 leading-relaxed">
-                We sent a verification link to <span className="font-semibold text-[#0f1e2d]">{email}</span>. 
+                We sent a verification link to <span className="font-semibold text-[#0f1e2d]">{email}</span>.
                 Please verify your account, then return to log in.
               </p>
               <button
@@ -304,29 +302,27 @@ function AuthContent() {
               <div className="flex border-b border-gray-100 mb-8">
                 <button
                   onClick={() => toggleTab("login")}
-                  className={`flex-1 py-4 text-center font-semibold transition-all relative ${
-                    activeTab === "login" ? "text-[#0f1e2d]" : "text-gray-400"
-                  }`}
+                  className={`flex-1 py-4 text-center font-semibold transition-all relative ${activeTab === "login" ? "text-[#0f1e2d]" : "text-gray-400"
+                    }`}
                 >
                   Login
                   {activeTab === "login" && (
-                    <motion.div 
+                    <motion.div
                       layoutId="activeTab"
-                      className="absolute bottom-0 left-0 right-0 h-[3px] bg-[#C9952A]" 
+                      className="absolute bottom-0 left-0 right-0 h-[3px] bg-[#C9952A]"
                     />
                   )}
                 </button>
                 <button
                   onClick={() => toggleTab("signup")}
-                  className={`flex-1 py-4 text-center font-semibold transition-all relative ${
-                    activeTab === "signup" ? "text-[#0f1e2d]" : "text-gray-400"
-                  }`}
+                  className={`flex-1 py-4 text-center font-semibold transition-all relative ${activeTab === "signup" ? "text-[#0f1e2d]" : "text-gray-400"
+                    }`}
                 >
                   Sign Up
                   {activeTab === "signup" && (
-                    <motion.div 
+                    <motion.div
                       layoutId="activeTab"
-                      className="absolute bottom-0 left-0 right-0 h-[3px] bg-[#C9952A]" 
+                      className="absolute bottom-0 left-0 right-0 h-[3px] bg-[#C9952A]"
                     />
                   )}
                 </button>
@@ -535,11 +531,10 @@ function AuthContent() {
                         <button
                           type="button"
                           onClick={() => setRole("student")}
-                          className={`flex flex-col items-center gap-3 p-4 rounded-xl border-2 transition ${
-                            role === "student"
-                              ? "border-[#C9952A] bg-[#C9952A]/10 text-[#0f1e2d]"
-                              : "border-gray-200 text-gray-400 hover:border-[#C9952A]/50"
-                          }`}
+                          className={`flex flex-col items-center gap-3 p-4 rounded-xl border-2 transition ${role === "student"
+                            ? "border-[#C9952A] bg-[#C9952A]/10 text-[#0f1e2d]"
+                            : "border-gray-200 text-gray-400 hover:border-[#C9952A]/50"
+                            }`}
                         >
                           <GraduationCap className={`h-8 w-8 ${role === "student" ? "text-[#C9952A]" : "text-gray-300"}`} />
                           <span className="text-sm font-bold">I’m a Student</span>
@@ -547,11 +542,10 @@ function AuthContent() {
                         <button
                           type="button"
                           onClick={() => setRole("agent")}
-                          className={`flex flex-col items-center gap-3 p-4 rounded-xl border-2 transition ${
-                            role === "agent"
-                              ? "border-[#C9952A] bg-[#C9952A]/10 text-[#0f1e2d]"
-                              : "border-gray-200 text-gray-400 hover:border-[#C9952A]/50"
-                          }`}
+                          className={`flex flex-col items-center gap-3 p-4 rounded-xl border-2 transition ${role === "agent"
+                            ? "border-[#C9952A] bg-[#C9952A]/10 text-[#0f1e2d]"
+                            : "border-gray-200 text-gray-400 hover:border-[#C9952A]/50"
+                            }`}
                         >
                           <Briefcase className={`h-8 w-8 ${role === "agent" ? "text-[#C9952A]" : "text-gray-300"}`} />
                           <span className="text-sm font-bold">I’m an Agent</span>

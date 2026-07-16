@@ -36,16 +36,17 @@ export default function Footer() {
         <div className="grid gap-10 lg:grid-cols-[1.15fr_1fr]">
           <div>
             <div className="mt-5">
-              <h2 className="text-3xl font-semibold tracking-tight md:text-4xl flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 <img
-                  src="/image/Campus-Hub.png"
-                  alt="CampusHub"
-                  className="h-10 w-10 rounded-full object-contain bg-white p-0.5 border border-black/5 shadow-sm"
+                  src="/image/Campus-Hub2.png"
+                  alt="CampusHub Logo"
+                  className="h-12 w-12 object-contain"
                 />
-                <span className="text-xl font-bold tracking-tight">
-                  CampusHub is the faster way to find student housing near FUTO.
-                </span>
-              </h2>
+                <span className="text-2xl font-bold tracking-tight text-white">Campus<span className="text-gold">Hub</span></span>
+              </div>
+              <p className="mt-4 text-sm leading-6 text-white/75">
+                CampusHub is the faster way to find student housing near FUTO.
+              </p>
             </div>
             <p className="mt-4 max-w-xl text-sm leading-7 text-white/65">
               Built for a modern student housing experience with verified
@@ -126,14 +127,14 @@ export default function Footer() {
         </div>
 
         <div className="mt-12 flex flex-col gap-4 border-t border-white/10 pt-6 text-sm text-white/50 md:flex-row md:items-center md:justify-between">
-          <p className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <img
-              src="/image/Campus-Hub.png"
-              alt="CampusHub"
-              className="h-5 w-5 rounded-full object-contain bg-white p-0.5 border border-black/5 shadow-sm"
+              src="/image/Campus-Hub2.png"
+              alt="CampusHub Logo"
+              className="h-6 w-6 object-contain"
             />
-            © {new Date().getFullYear()} CampusHub. Designed for FUTO students.
-          </p>
+            <span>© {new Date().getFullYear()} Campus<span className="text-gold">Hub</span>. Designed for FUTO students.</span>
+          </div>
           <p>Fast, verified, and WhatsApp-first.</p>
         </div>
       </div>

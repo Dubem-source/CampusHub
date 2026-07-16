@@ -49,9 +49,9 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { StudentSidebar } from "@/components/student/StudentSidebar";
 import { useSidebar } from "@/components/ui/sidebar";
+import { db } from "@/lib/firebase";
+import { collection, query, where, onSnapshot, doc, deleteDoc, setDoc } from "firebase/firestore";
 import {
-  getAllRoomUnits,
-  getLodgeBySlug,
   formatNaira,
   RoomUnit,
   Lodge,
@@ -82,59 +82,9 @@ const MOCK_STUDENT = {
   gender: 'Female'
 };
 
-const INITIAL_SAVED_ROOMS = [
-  'room-ig-1', // Self-contain at Ihiagwa Gardens
-  'room-es-1', // Self-contain at Eziobodo Suites
-  'room-cv-1', // Self-contain at Campus View
-  'room-at-1'  // Self-contain at Aladinma Terrace
-];
+// Saved rooms and notifications are fetched from Firestore — no mock arrays.
 
-const INITIAL_NOTIFICATIONS = [
-  {
-    id: 1,
-    type: 'roommate_match',
-    title: 'You matched with Emeka!',
-    message: 'Tap to start a conversation on WhatsApp.',
-    time: '2 hours ago',
-    read: false,
-    actionPhone: '08087654321',
-    actionName: 'Emeka'
-  },
-  {
-    id: 2,
-    type: 'availability',
-    title: 'Room available again',
-    message: 'Self-contain at Eziobodo Student Haven is now available.',
-    time: '1 day ago',
-    read: false
-  },
-  {
-    id: 3,
-    type: 'verification',
-    title: 'Account verified',
-    message: 'Your student account has been verified.',
-    time: '3 days ago',
-    read: true
-  },
-  {
-    id: 4,
-    type: 'roommate_match',
-    title: 'New match with Blessing',
-    message: 'Blessing from Biochemistry wants to be your roommate.',
-    time: '4 days ago',
-    read: true,
-    actionPhone: '08122334455',
-    actionName: 'Blessing'
-  },
-  {
-    id: 5,
-    type: 'system',
-    title: 'Welcome to CampusHub',
-    message: 'Complete your profile to get matched with perfect roommates.',
-    time: '1 week ago',
-    read: true
-  }
-];
+
 
 // --- Utilities ---
 
@@ -296,15 +246,21 @@ function StudentDashboardContent() {
       router.push("/auth?mode=login");
       return;
     }
-    if (profile && profile.role !== "student") {
-      // Logged in but wrong role — redirect them to their correct dashboard
-      if (profile.role === "agent") router.push("/dashboard/agent");
-      else if (profile.role === "admin") router.push("/admin");
-      else router.push("/auth?mode=login");
+    if (profile) {
+      if (profile.role !== "student") {
+        // Logged in but wrong role — redirect them to their correct dashboard
+        if (profile.role === "agent") router.push("/dashboard/agent");
+        else if (profile.role === "admin") router.push("/admin");
+        else router.push("/auth?mode=login");
+      }
+    } else {
+      // User is logged in but has no profile document in Firestore, bounce to login
+      router.push("/auth?mode=login");
     }
   }, [user, profile, authLoading, router]);
-  const [savedRoomIds, setSavedRoomIds] = useState(INITIAL_SAVED_ROOMS);
-  const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
+  // savedRooms stores full {room, lodge} objects fetched from Firestore savedRooms collection
+  const [savedRooms, setSavedRooms] = useState<{ id: string; room: RoomUnit; lodge: Lodge | null }[]>([]);
+  const [notifications, setNotifications] = useState<any[]>([]);
   const [recentRooms, setRecentRooms] = useState<{ room: RoomUnit; lodge: Lodge }[]>([]);
   const [isDark, setIsDark] = useState(false);
   const mainRef = useRef<HTMLElement | null>(null);
@@ -705,33 +661,16 @@ function StudentDashboardContent() {
     }
   };
 
-  // Recently Viewed Logic
+  // Recently viewed rooms — stored in localStorage as room IDs only (non-sensitive browsing history)
   useEffect(() => {
     const LOCAL_STORAGE_KEY = 'campus_recent';
-
-    // Simulate pre-populating localStorage if empty for demo
-    let recentIds = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || '[]');
-    if (recentIds.length === 0) {
-      recentIds = ['room-ig-2', 'room-es-2', 'room-cv-2'];
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(recentIds));
+    const recentIds = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || '[]') as string[];
+    // Recent rooms will be fetched from Firestore rooms collection
+    // For now, just clear any stale mock IDs from pre-launch
+    if (recentIds.some((id: string) => id.startsWith('room-ig') || id.startsWith('room-es') || id.startsWith('room-cv') || id.startsWith('room-at'))) {
+      localStorage.removeItem(LOCAL_STORAGE_KEY);
     }
-
-    // Match IDs to full data
-    const matched = recentIds
-      .map((id: string) => {
-        const room = getAllRoomUnits().find(r => r.id === id);
-        if (!room) return null;
-        const lodge = getLodgeBySlug(room.lodgeSlug);
-        if (!lodge) return null;
-        return { room, lodge };
-      })
-      .filter(Boolean) as { room: RoomUnit; lodge: Lodge }[];
-
-    // Use Promise.resolve().then() to ensure the state update happens after the current render cycle,
-    // resolving the 'setState in effect' lint error.
-    Promise.resolve().then(() => {
-      setRecentRooms(matched);
-    });
+    setRecentRooms([]);
   }, []);
 
   // Sync student details, notifications, and clear agent logged in status on mount
@@ -775,23 +714,39 @@ function StudentDashboardContent() {
       }
     }
 
-    const savedNotifications = localStorage.getItem("student_notifications");
-    if (savedNotifications) {
-      try {
-        setNotifications(JSON.parse(savedNotifications));
-      } catch (e) {
-        console.error("Failed to parse student_notifications", e);
-      }
-    } else {
-      localStorage.setItem("student_notifications", JSON.stringify(INITIAL_NOTIFICATIONS));
+    // Subscribe to student notifications from Firestore
+    if (user) {
+      const notifsUnsub = onSnapshot(
+        query(collection(db, "notifications"), where("uid", "==", user.uid)),
+        (snap) => {
+          const dbNotifs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+          setNotifications(dbNotifs.sort((a: any, b: any) => (b.createdAt || "").localeCompare(a.createdAt || "")));
+        }
+      );
+      return () => notifsUnsub();
     }
-  }, []);
+  }, [user]);
 
-  // Sync notifications changes to localStorage and dispatch custom event
+  // Subscribe to saved rooms from Firestore savedRooms collection
   useEffect(() => {
-    localStorage.setItem("student_notifications", JSON.stringify(notifications));
-    window.dispatchEvent(new Event("student-notifications-updated"));
-  }, [notifications]);
+    if (!user) return;
+    const unsubSaved = onSnapshot(
+      query(collection(db, "savedRooms"), where("studentId", "==", user.uid)),
+      (snap) => {
+        const fetched: { id: string; room: RoomUnit; lodge: Lodge | null }[] = [];
+        snap.forEach((d) => {
+          const data = d.data();
+          fetched.push({
+            id: d.id,
+            room: data.room as RoomUnit,
+            lodge: data.lodge as Lodge | null,
+          });
+        });
+        setSavedRooms(fetched);
+      }
+    );
+    return () => unsubSaved();
+  }, [user]);
 
   // Sync marketplace and services data
   useEffect(() => {
@@ -874,11 +829,16 @@ function StudentDashboardContent() {
     setPasswordForm({ current: "", new: "", confirm: "" });
   };
 
-  const removeSavedRoom = (id: string, e: React.MouseEvent) => {
+  const removeSavedRoom = async (docId: string, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setSavedRoomIds(prev => prev.filter(roomId => roomId !== id));
-    toast.success("Room removed from saved");
+    try {
+      await deleteDoc(doc(db, "savedRooms", docId));
+      toast.success("Room removed from saved");
+    } catch (err) {
+      console.error("Failed to remove saved room:", err);
+      toast.error("Could not remove. Please try again.");
+    }
   };
 
   const markAsRead = (id: number) => {
@@ -903,13 +863,13 @@ function StudentDashboardContent() {
     return (
       <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-white dark:bg-[#08131e] transition-colors duration-300">
         <div className="relative flex flex-col items-center space-y-4">
-          <div className="relative h-20 w-20 rounded-full bg-gold/10 p-2 flex items-center justify-center shadow-lg border border-gold/20 animate-pulse">
+          <div className="relative h-32 w-32 flex items-center justify-center animate-pulse">
             <Image
-              src="/image/Campus-Hub.png"
+              src="/image/Campus-Hub2.png"
               alt="CampusHub Logo"
-              width={64}
-              height={64}
-              className="rounded-full object-contain"
+              width={120}
+              height={120}
+              className="object-contain"
             />
           </div>
           <div className="text-center space-y-2">
@@ -959,7 +919,7 @@ function StudentDashboardContent() {
               alt="Campus-Hub Logo"
               width={32}
               height={32}
-              className="rounded-full bg-white dark:bg-white/10 p-0.5"
+              className="object-contain"
             />
             <span className="text-lg font-bold tracking-tight text-navy dark:text-white">
               Campus<span className="text-gold">Hub</span>
@@ -1328,18 +1288,15 @@ function StudentDashboardContent() {
                           />
                         ))}
                       </div>
-                    ) : savedRoomIds.length > 0 ? (
+                    ) : savedRooms.length > 0 ? (
                       <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
                         <AnimatePresence mode="popLayout">
-                          {savedRoomIds.map((roomId) => {
-                            const room = getAllRoomUnits().find(r => r.id === roomId);
+                          {savedRooms.map(({ id: docId, room, lodge }) => {
                             if (!room) return null;
-                            const lodge = getLodgeBySlug(room.lodgeSlug);
-                            if (!lodge) return null;
 
                             return (
                               <motion.div
-                                key={roomId}
+                                key={docId}
                                 initial={{ opacity: 1, scale: 1 }}
                                 exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
                                 layout
@@ -1348,18 +1305,18 @@ function StudentDashboardContent() {
                                 <div className="relative h-48 overflow-hidden">
                                   {/* Nav Trigger */}
                                   <div
-                                    onClick={() => router.push(`/lodges/${lodge.slug}/rooms/${room.id}`)}
+                                    onClick={() => lodge && router.push(`/lodges/${room.lodgeSlug}/rooms/${room.id}`)}
                                     className="absolute inset-0 z-10 cursor-pointer"
                                   />
                                   <img
-                                    src={room.photos[0]}
+                                    src={room.photos?.[0] || ""}
                                     alt={room.roomType}
                                     className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-110"
                                   />
                                   <div className="absolute inset-0 bg-gradient-to-t from-navy/60 to-transparent" />
 
                                   <button
-                                    onClick={(e) => removeSavedRoom(roomId, e)}
+                                    onClick={(e) => removeSavedRoom(docId, e)}
                                     type="button"
                                     className="absolute right-4 top-4 z-20 flex h-10 w-10 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur transition hover:bg-white hover:text-red-500"
                                   >
@@ -1378,14 +1335,14 @@ function StudentDashboardContent() {
                                 </div>
 
                                 <div
-                                  onClick={() => router.push(`/lodges/${lodge.slug}/rooms/${room.id}`)}
+                                  onClick={() => lodge && router.push(`/lodges/${room.lodgeSlug}/rooms/${room.id}`)}
                                   className="cursor-pointer p-5"
                                 >
                                   <div className="flex items-center justify-between">
                                     <h3 className="font-bold text-navy dark:text-white">{room.roomType}</h3>
                                     <p className="text-sm font-bold text-gold">{formatNaira(room.price)}</p>
                                   </div>
-                                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{lodge.name} • {lodge.area}</p>
+                                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{lodge?.name || "Lodge"} • {room.area}</p>
                                   <div className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-gray-50 dark:bg-white/5 py-3 text-xs font-bold text-navy dark:text-gold transition hover:bg-gold dark:hover:bg-gold hover:text-navy dark:hover:text-navy">
                                     View Details
                                     <ArrowRight className="h-3.5 w-3.5" />

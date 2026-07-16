@@ -252,11 +252,16 @@ export default function AgentDashboard() {
       router.push("/auth?mode=login");
       return;
     }
-    if (profile && profile.role !== "agent") {
-      // Logged in but wrong role — redirect them to their correct dashboard
-      if (profile.role === "student") router.push("/dashboard/student");
-      else if (profile.role === "admin") router.push("/admin");
-      else router.push("/auth?mode=login");
+    if (profile) {
+      if (profile.role !== "agent") {
+        // Logged in but wrong role — redirect them to their correct dashboard
+        if (profile.role === "student") router.push("/dashboard/student");
+        else if (profile.role === "admin") router.push("/admin");
+        else router.push("/auth?mode=login");
+      }
+    } else {
+      // User is logged in but has no profile document in Firestore, bounce to login
+      router.push("/auth?mode=login");
     }
   }, [user, profile, authLoading, router]);
 
@@ -1109,15 +1114,8 @@ export default function AgentDashboard() {
         building_name: newListingForm.building_name,
       });
 
-      setAgentData(prev => {
-        const updated = {
-          ...prev,
-          listings: [newListing, ...(prev.listings || [])]
-        };
-        localStorage.setItem("agent_data", JSON.stringify(updated));
-        window.dispatchEvent(new Event("agent-data-updated"));
-        return updated;
-      });
+      // Refresh agent listings from Firestore (source of truth)
+      setAgentData(prev => ({ ...prev, listings: [newListing, ...(prev.listings || [])] }));
 
       toast.success("New listing added successfully!");
 
@@ -1204,13 +1202,13 @@ export default function AgentDashboard() {
     return (
       <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-white dark:bg-[#08131e] transition-colors duration-300">
         <div className="relative flex flex-col items-center space-y-4">
-          <div className="relative h-20 w-20 rounded-full bg-gold/10 p-2 flex items-center justify-center shadow-lg border border-gold/20 animate-pulse">
+          <div className="relative h-32 w-32 flex items-center justify-center animate-pulse">
             <Image
-              src="/image/Campus-Hub.png"
+              src="/image/Campus-Hub2.png"
               alt="CampusHub Logo"
-              width={64}
-              height={64}
-              className="rounded-full object-contain"
+              width={120}
+              height={120}
+              className="object-contain"
             />
           </div>
           <div className="text-center space-y-2">
@@ -1252,7 +1250,7 @@ export default function AgentDashboard() {
               alt="Campus-Hub Logo"
               width={32}
               height={32}
-              className="rounded-full bg-white dark:bg-white/10 p-0.5"
+              className="object-contain"
             />
             <span className="text-lg font-bold tracking-tight text-navy dark:text-white">
               Campus<span className="text-gold">Hub</span>

@@ -82,13 +82,13 @@ export function AdminSidebar({
     <Sidebar className="border-r-0">
       <SidebarHeader className="h-[72px] flex justify-center flex-col px-5 border-b border-sidebar-border shrink-0">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full border border-gold/40 overflow-hidden flex items-center justify-center flex-shrink-0 bg-white/5 shadow-sm">
+          <div className="w-10 h-10 flex items-center justify-center flex-shrink-0">
             <Image
-              src="/image/Campus-Hub.png"
+              src="/image/Campus-Hub2.png"
               alt="CampusHub Logo"
-              width={36}
-              height={36}
-              className="w-full h-full object-cover"
+              width={40}
+              height={40}
+              className="w-full h-full object-contain"
             />
           </div>
           {state === "expanded" && (

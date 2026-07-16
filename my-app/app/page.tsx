@@ -166,13 +166,13 @@ export default function Home() {
     return (
       <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-white dark:bg-[#08131e] transition-colors duration-300">
         <div className="relative flex flex-col items-center space-y-4">
-          <div className="relative h-20 w-20 rounded-full bg-gold/10 p-2 flex items-center justify-center shadow-lg border border-gold/20 animate-pulse">
+          <div className="relative h-32 w-32 flex items-center justify-center animate-pulse">
             <Image
-              src="/image/Campus-Hub.png"
+              src="/image/Campus-Hub2.png"
               alt="CampusHub Logo"
-              width={64}
-              height={64}
-              className="rounded-full object-contain"
+              width={120}
+              height={120}
+              className="object-contain"
             />
           </div>
           <div className="text-center space-y-2">
