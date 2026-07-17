@@ -158,9 +158,9 @@ function LodgesContent() {
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(201,149,42,0.08),transparent_30%),linear-gradient(180deg,#f8f9fa_0%,#ffffff_52%)] text-black">
-      <Header />
+      <Header showSpacer={false} />
       <main className="mx-auto max-w-7xl px-4 pb-10 pt-0 sm:px-6 md:px-8 lg:px-10">
-        <section className="-mx-4 border-x border-b border-[#0f274f] bg-[#071226] px-6 py-8 text-white shadow-[0_12px_36px_rgba(7,18,38,0.18)] sm:-mx-6 sm:px-8 sm:py-10 md:-mx-8 lg:-mx-10">
+        <section className="-mx-4 border-x border-b border-[#0f274f] bg-[#071226] px-6 pt-24 pb-8 text-white shadow-[0_12px_36px_rgba(7,18,38,0.18)] sm:-mx-6 sm:px-8 sm:pt-28 sm:pb-10 md:-mx-8 lg:-mx-10">
           <div className="max-w-3xl">
             <p className="text-xs font-semibold uppercase tracking-[0.28em] text-gold">
               Browse lodges

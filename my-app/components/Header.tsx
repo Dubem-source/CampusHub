@@ -22,7 +22,7 @@ function getInitials(name?: string) {
   return name.trim().split(/\s+/).map(n => n[0]).join('').toUpperCase().slice(0, 2);
 }
 
-export default function Header() {
+export default function Header({ showSpacer = true }: { showSpacer?: boolean }) {
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false)
   const pathname = usePathname()
   const { toggleSidebar, openMobile } = useSidebar()
@@ -42,7 +42,7 @@ export default function Header() {
   return (
     <>
       <header className="fixed top-0 left-0 right-0 z-50 border-b border-black/5 dark:border-white/10 bg-white/80 dark:bg-navy/80 backdrop-blur-xl transition-colors duration-300">
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 md:px-8 lg:px-10">
+      <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3 md:px-8 lg:px-10">
         <Link href="/" className="flex items-center gap-1">
           <Image
             src="/image/Campus-Hub2.png"
@@ -223,7 +223,9 @@ export default function Header() {
       </header>
 
       {/* Spacer to prevent page content from going underneath the fixed header */}
-      <div className="h-[82px] w-full shrink-0" />
+      {showSpacer && (
+        <div className="h-[80px] w-full shrink-0" />
+      )}
 
       {isStudent && (
         <StudentSidebar

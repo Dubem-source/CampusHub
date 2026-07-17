@@ -90,6 +90,72 @@ const steps = [
     text: "Message agents instantly with a polished pre-filled request for inspections.",
   },
 ];
+ 
+const row1Testimonials = [
+  {
+    text: "I found a verified lodge in under 24 hours and the agent was responsive on WhatsApp. Moving in was smooth and affordable.",
+    name: "Chioma N.",
+    dept: "Computer Science",
+  },
+  {
+    text: "No stressful physical searching for hours. I filtered by Obinze, clicked WhatsApp, and booked an inspection instantly.",
+    name: "Kelechi A.",
+    dept: "Cybersecurity",
+  },
+  {
+    text: "Saved room matches to my favorites, shared them with my course rep, and we secured a self-contain in Eziobodo easily.",
+    name: "Precious E.",
+    dept: "Information Technology",
+  },
+  {
+    text: "The rating badges are accurate. I felt safe knowing agents are verified by the admin team before listings are posted.",
+    name: "Michael B.",
+    dept: "Civil Engineering",
+  },
+  {
+    text: "The roommates match feature is a lifesaver. Found someone with similar study habits and shared the lodge costs.",
+    name: "Favour J.",
+    dept: "Biochemistry",
+  },
+  {
+    text: "FUTO gates lodges are usually expensive but CampusHub budget slider helped me find a pocket-friendly place at gate.",
+    name: "Daniel U.",
+    dept: "Electrical Engineering",
+  },
+];
+ 
+const row2Testimonials = [
+  {
+    text: "CampusHub made comparing room options easy. The photos were accurate and booking was direct.",
+    name: "Emeka O.",
+    dept: "Mechanical Engineering",
+  },
+  {
+    text: "Finally, a student housing platform that gets it. No fake agents, no hidden registration fees. Just direct search.",
+    name: "Somto V.",
+    dept: "Software Engineering",
+  },
+  {
+    text: "I love the clean interface and the night mode! Discovering apartments near FUTO has never been this stress-free.",
+    name: "Sandra P.",
+    dept: "Geology",
+  },
+  {
+    text: "Found a flatmate in less than 3 days. The platform layout is highly responsive and fast on mobile.",
+    name: "Chinedu S.",
+    dept: "Project Management Tech",
+  },
+  {
+    text: "Highly recommend this for freshmen. Finding housing close to class landmarks saved me from getting lost!",
+    name: "Joy U.",
+    dept: "Public Health",
+  },
+  {
+    text: "WhatsApp-first flow is genius. Agents reply almost instantly since they don't have to monitor a separate app.",
+    name: "Praise K.",
+    dept: "Agricultural Engineering",
+  },
+];
 
 const fadeUp: Variants = {
   hidden: { opacity: 0, y: 24 },
@@ -193,10 +259,10 @@ export default function Home() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[radial-gradient(circle_at_top,_rgba(201,149,42,0.10),_transparent_35%),linear-gradient(180deg,#f8f9fa_0%,#ffffff_60%,#f7f7f5_100%)] text-navy">
-      <Header />
+      <Header showSpacer={false} />
 
       <main className="flex-1">
-        <section className="relative isolate overflow-hidden border-b border-black/5 min-h-[820px] lg:min-h-[900px] flex items-center bg-[#060c16]">
+        <section className="relative isolate overflow-hidden border-b border-black/5 min-h-[680px] lg:min-h-[750px] flex items-center bg-[#060c16]">
           <div className="absolute inset-0">
             <ImageCarousel />
           </div>
@@ -212,21 +278,20 @@ export default function Home() {
             initial="hidden"
             animate="show"
             variants={stagger}
-            className="relative z-10 mx-auto w-full max-w-7xl px-6 py-20 lg:pt-10 lg:pb-50 md:px-8 lg:px-10 grid grid-cols-1 lg:grid-cols-[1.2fr_1fr] gap-12 items-center"
+            className="relative z-10 mx-auto w-full max-w-7xl px-6 pt-24 pb-14 lg:pt-32 lg:pb-16 md:px-8 lg:px-10 grid grid-cols-1 lg:grid-cols-[1.2fr_1fr] gap-10 items-center"
           >
             {/* Left Content Area */}
-            <div className="text-center lg:text-left text-white flex flex-col items-center lg:items-start justify-center">
+            <div className="text-center lg:text-left text-white flex flex-col items-center lg:items-start justify-center lg:pl-10">
               <motion.div
                 variants={fadeUp}
-                className="inline-flex items-center gap-2 px-3 py-1 text-xs font-semibold text-gold   w-fit mb-6 shadow-[0_0_15px_rgba(201,149,42,0.1)]"
+                className="inline-flex items-center gap-2 px-3 py-1 text-xs font-semibold text-gold w-fit mb-5 shadow-[0_0_15px_rgba(201,149,42,0.1)]"
               >
-
                 <span>Verified FUTO Student Accommodation</span>
               </motion.div>
 
               <motion.h1
                 variants={fadeUp}
-                className="text-4xl sm:text-6xl lg:text-7xl font-extrabold leading-[1.05] tracking-tight mb-6"
+                className="text-3xl sm:text-5xl lg:text-5xl font-extrabold leading-[1.1] tracking-tight mb-5"
               >
                 Find FUTO Lodges
                 <span className="block text-transparent bg-clip-text bg-gradient-to-r from-gold via-amber-400 to-yellow-200 mt-1">Stress-Free.</span>
@@ -234,7 +299,7 @@ export default function Home() {
 
               <motion.p
                 variants={fadeUp}
-                className="text-sm sm:text-base text-gray-300 max-w-xl leading-relaxed mb-8"
+                className="text-xs sm:text-sm text-gray-300 max-w-md leading-relaxed mb-6"
               >
                 Compare verified student apartments, filter by area/budget, and contact trusted local agents instantly via WhatsApp. Built by students, for students.
               </motion.p>
@@ -250,18 +315,18 @@ export default function Home() {
                   router.push(`/lodges?${params.toString()}`);
                 }}
                 variants={fadeUp}
-                className="w-full max-w-xl mb-10 mx-auto lg:mx-0"
+                className="w-full max-w-lg mb-8 mx-auto lg:mx-0"
               >
-                <div className="flex flex-col md:flex-row items-stretch gap-2.5 p-2 bg-white/5 border border-white/10 backdrop-blur-xl rounded-2xl md:rounded-full shadow-2xl w-full">
+                <div className="flex flex-col md:flex-row items-stretch gap-2 p-2 bg-white/5 border border-white/10 backdrop-blur-xl rounded-2xl md:rounded-full shadow-2xl w-full">
                   {/* Custom Area Dropdown */}
-                  <div className="relative flex items-center gap-2 px-3 border-b md:border-b-0 md:border-r border-white/10 py-2 md:py-0 min-w-[140px] select-none">
+                  <div className="relative flex items-center gap-2 px-3 border-b md:border-b-0 md:border-r border-white/10 py-2 md:py-0 min-w-[130px] select-none">
                     <div
                       className="flex items-center justify-between gap-2 w-full cursor-pointer py-1"
                       onClick={() => setAreaDropdownOpen(!areaDropdownOpen)}
                     >
                       <div className="flex items-center gap-2 min-w-0">
                         <MapPin className="h-4 w-4 text-gold shrink-0" />
-                        <span className="text-white text-xs sm:text-sm font-semibold truncate text-left">
+                        <span className="text-white text-xs font-semibold truncate text-left">
                           {selectedArea || "Any Area"}
                         </span>
                       </div>
@@ -291,7 +356,7 @@ export default function Home() {
                                 setSelectedArea(item.value);
                                 setAreaDropdownOpen(false);
                               }}
-                              className={`w-full text-left px-3 py-2 rounded-xl text-xs sm:text-sm font-medium transition cursor-pointer select-none ${
+                              className={`w-full text-left px-3 py-2 rounded-xl text-xs font-medium transition cursor-pointer select-none ${
                                 selectedArea === item.value
                                   ? 'bg-[#e0b445] text-navy font-bold shadow-md shadow-gold/15'
                                   : 'text-white/80 hover:bg-white/5 hover:text-white'
@@ -313,52 +378,111 @@ export default function Home() {
                       value={query}
                       onChange={(e) => setQuery(e.target.value)}
                       placeholder="Lodge name, landmark, specs..."
-                      className="w-full bg-transparent text-white text-xs sm:text-sm border-0 outline-none placeholder:text-gray-500 animate-none"
+                      className="w-full bg-transparent text-white text-xs border-0 outline-none placeholder:text-gray-500 animate-none"
                     />
                   </div>
 
                   <button
                     type="submit"
-                    className="bg-gold text-navy font-extrabold text-xs sm:text-sm px-6 py-3.5 rounded-full flex items-center justify-center gap-2 hover:bg-[#d7a93a] transition-all hover:scale-[1.02] cursor-pointer border-0 shrink-0 shadow-lg shadow-gold/25"
+                    className="bg-gold text-navy font-extrabold text-xs px-5 py-3 rounded-full flex items-center justify-center gap-2 hover:bg-[#d7a93a] transition-all hover:scale-[1.02] cursor-pointer border-0 shrink-0 shadow-lg shadow-gold/25"
                   >
-                    <Search className="h-4 w-4" />
+                    <Search className="h-3.5 w-3.5" />
                     Search Lodges
                   </button>
                 </div>
               </motion.form>
 
               {/* Trust Factor Row */}
-              <motion.div variants={stagger} className="grid grid-cols-3 gap-4 max-w-xl w-full text-center lg:text-left border-t border-white/10 pt-8">
+              <motion.div variants={stagger} className="grid grid-cols-3 gap-4 max-w-xl w-full text-center lg:text-left border-t border-white/10 pt-6">
                 {stats.map((item) => (
                   <div key={item.label} className="space-y-1">
-                    <span className="text-2xl font-extrabold text-white block leading-none">{item.value}</span>
-                    <span className="text-xs text-gray-400 uppercase tracking-wider font-semibold block">{item.label}</span>
+                    <span className="text-xl font-extrabold text-white block leading-none">{item.value}</span>
+                    <span className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold block">{item.label}</span>
                   </div>
                 ))}
               </motion.div>
             </div>
 
-            {/* Right Interactive Mockup Showcase (iPhone image) */}
-            <div className="relative flex items-center justify-center w-full mt-10 lg:mt-0 select-none">
+            {/* Right Interactive Mockup Showcase (iPhone image + Floating Cards) */}
+            <div className="relative flex items-center justify-center w-full mt-8 lg:mt-0 select-none h-[400px] lg:h-[500px]">
               {/* Luminous Stand Podium effect under phone */}
-              <div className="absolute bottom-2 w-64 h-8 bg-gold/15 blur-[12px] rounded-full transform rotate-x-60 pointer-events-none animate-pulse" />
+              <div className="absolute bottom-6 w-44 h-6 bg-gold/15 blur-[10px] rounded-full transform rotate-x-60 pointer-events-none animate-pulse" />
 
+              {/* Floating Card 1: Verified (Top-Left) */}
               <motion.div
-                animate={{ y: [0, -10, 0] }}
+                initial={{ opacity: 0, x: -20, y: -10 }}
+                animate={{ opacity: 1, x: 0, y: [0, -6, 0] }}
+                transition={{
+                  opacity: { duration: 0.6, delay: 0.4 },
+                  x: { duration: 0.6, delay: 0.4 },
+                  y: { repeat: Infinity, duration: 4, ease: "easeInOut", delay: 0.2 }
+                }}
+                className="absolute left-2 sm:left-4 top-14 z-20 flex items-center gap-2 rounded-2xl bg-[#0d1624]/90 border border-white/10 p-2.5 sm:p-3 shadow-2xl backdrop-blur-md max-w-[140px] pointer-events-none"
+              >
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-gold/15 text-gold">
+                  <BadgeCheck className="h-4.5 w-4.5" />
+                </div>
+                <div>
+                  <p className="text-[9px] font-bold uppercase tracking-wider text-gold">Verified</p>
+                  <p className="text-xs font-semibold text-white/95 leading-tight">100% Inspected</p>
+                </div>
+              </motion.div>
+
+              {/* Floating Card 2: Price (Bottom-Right) */}
+              <motion.div
+                initial={{ opacity: 0, x: 20, y: 20 }}
+                animate={{ opacity: 1, x: 0, y: [0, 8, 0] }}
+                transition={{
+                  opacity: { duration: 0.6, delay: 0.6 },
+                  x: { duration: 0.6, delay: 0.6 },
+                  y: { repeat: Infinity, duration: 5.5, ease: "easeInOut", delay: 0.5 }
+                }}
+                className="absolute right-2 sm:right-4 bottom-16 z-20 flex items-center gap-2 rounded-2xl bg-[#0d1624]/90 border border-white/10 p-2.5 sm:p-3 shadow-2xl backdrop-blur-md max-w-[140px] pointer-events-none"
+              >
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-blue-500/10 text-blue-400">
+                  <Building className="h-4.5 w-4.5" />
+                </div>
+                <div>
+                  <p className="text-[9px] font-bold uppercase tracking-wider text-blue-400">FUTO gate</p>
+                  <p className="text-xs font-semibold text-white/95 leading-tight">5 mins walk</p>
+                </div>
+              </motion.div>
+
+              {/* Floating Card 3: Rating (Middle-Right/Upper-Right) */}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1, y: [0, -8, 0] }}
+                transition={{
+                  opacity: { duration: 0.6, delay: 0.8 },
+                  scale: { duration: 0.6, delay: 0.8 },
+                  y: { repeat: Infinity, duration: 4.8, ease: "easeInOut", delay: 0.8 }
+                }}
+                className="absolute right-1 sm:right-2 top-20 z-20 flex items-center gap-1.5 rounded-xl bg-gold text-navy px-2.5 py-1.5 shadow-2xl font-bold text-[10px] sm:text-xs pointer-events-none"
+              >
+                <Star className="h-3.5 w-3.5 fill-current" />
+                <span>4.9 Rating</span>
+              </motion.div>
+
+              {/* Main Phone Mockup */}
+              <motion.div
+                animate={{ y: [0, -8, 0] }}
                 transition={{ repeat: Infinity, duration: 5, ease: "easeInOut" }}
-                className="relative z-10 flex justify-center w-full max-w-[280px] sm:max-w-[310px]"
+                className="relative z-10 flex justify-center w-full max-w-[200px] sm:max-w-[240px]"
               >
                 <Image
                   src="/image/mobile image.png"
                   alt="CampusHub Mobile Preview"
-                  width={310}
-                  height={620}
+                  width={240}
+                  height={480}
                   className="object-contain"
                   priority
                 />
               </motion.div>
             </div>
           </motion.div>
+
+          {/* Bottom fade out overlay for mobile view to transition from dark hero to light body */}
+          <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-[#f8f9fa] dark:from-[#08131e] to-transparent pointer-events-none lg:hidden" />
         </section>
 
         <section className="mx-auto max-w-7xl px-6 py-16 md:px-8 lg:px-10">
@@ -465,66 +589,107 @@ export default function Home() {
         </motion.section>
       </main>
 
-      <motion.section
+            <motion.section
         initial="hidden"
         whileInView="show"
-        viewport={{ once: true, amount: 0.2 }}
+        viewport={{ once: true, amount: 0.15 }}
         variants={fadeUp}
-        className="mx-auto max-w-7xl px-6 pb-16 md:px-8 lg:px-10"
+        className="w-full pb-20 overflow-hidden"
       >
-        <div className="rounded-2xl bg-white p-8 md:p-10">
-          <h2 className="text-2xl font-semibold text-black">
+        <div className="mx-auto max-w-7xl px-6 md:px-8 lg:px-10 text-center mb-12">
+          <h2 className="text-3xl font-extrabold text-navy dark:text-white tracking-tight">
             What students say
           </h2>
-          <p className="mt-2 text-sm text-gray-600">
-            Real students. Real experiences from FUTO.
+          <p className="mt-3 text-sm text-gray-600 dark:text-gray-400 max-w-md mx-auto">
+            Real students. Real experiences from FUTO. See how they found housing stress-free.
           </p>
+        </div>
 
-          <motion.div
-            variants={stagger}
-            className="mt-6 grid gap-6 sm:grid-cols-3"
-          >
-            <motion.blockquote
-              variants={fadeUp}
-              className="rounded-2xl border border-amber-500 p-6 transition hover:-translate-y-0.5 hover:bg-amber-100"
-            >
-              <p className="text-sm text-gray-700">
-                “I found a verified lodge in under 24 hours and the agent was
-                responsive on WhatsApp. Moving in was smooth and affordable.”
-              </p>
-              <footer className="mt-4 text-xs text-gray-500">
-                — Chioma N., Computer Science
-              </footer>
-            </motion.blockquote>
+        {/* Infinite Marquee Container */}
+        <div className="marquee-container flex flex-col gap-6 w-full select-none">
+          {/* Row 1: Moving Left */}
+          <div className="relative flex overflow-x-hidden w-full mask-gradient-x py-1">
+            <div className="animate-marquee-left flex gap-6">
+              {/* First Set of Cards */}
+              {row1Testimonials.map((t, idx) => (
+                <div key={`r1-${idx}`} className="w-[300px] sm:w-[350px] shrink-0 rounded-2xl bg-white dark:bg-[#0f1d2e] border border-black/5 dark:border-white/10 p-6 shadow-sm flex flex-col justify-between hover:border-gold/30 transition-colors">
+                  <p className="text-sm text-gray-700 dark:text-gray-300 italic leading-relaxed">
+                    “{t.text}”
+                  </p>
+                  <div className="mt-4 flex items-center gap-3 border-t border-black/5 dark:border-white/5 pt-3">
+                    <div className="h-8 w-8 rounded-full bg-gold/15 flex items-center justify-center text-xs font-bold text-gold shrink-0">
+                      {t.name[0]}
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-navy dark:text-white">{t.name}</p>
+                      <p className="text-[10px] text-gray-500 dark:text-gray-400">{t.dept}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {/* Duplicate Set for Seamless Loop */}
+              {row1Testimonials.map((t, idx) => (
+                <div key={`r1-dup-${idx}`} className="w-[300px] sm:w-[350px] shrink-0 rounded-2xl bg-white dark:bg-[#0f1d2e] border border-black/5 dark:border-white/10 p-6 shadow-sm flex flex-col justify-between hover:border-gold/30 transition-colors">
+                  <p className="text-sm text-gray-700 dark:text-gray-300 italic leading-relaxed">
+                    “{t.text}”
+                  </p>
+                  <div className="mt-4 flex items-center gap-3 border-t border-black/5 dark:border-white/5 pt-3">
+                    <div className="h-8 w-8 rounded-full bg-gold/15 flex items-center justify-center text-xs font-bold text-gold shrink-0">
+                      {t.name[0]}
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-navy dark:text-white">{t.name}</p>
+                      <p className="text-[10px] text-gray-500 dark:text-gray-400">{t.dept}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
 
-            <motion.blockquote
-              variants={fadeUp}
-              className="rounded-2xl border border-amber-500 p-6 transition hover:-translate-y-0.5 hover:bg-amber-100"
-            >
-              <p className="text-sm text-gray-700">
-                “CampusHub made comparing room options easy. The photos were
-                accurate and booking was direct.”
-              </p>
-              <footer className="mt-4 text-xs text-gray-500">
-                — Emeka O., Mechanical Engineering
-              </footer>
-            </motion.blockquote>
-
-            <motion.blockquote
-              variants={fadeUp}
-              className="rounded-2xl border border-amber-500 p-6 transition hover:-translate-y-0.5 hover:bg-amber-100"
-            >
-              <p className="text-sm text-gray-700">
-                “I saved several lodges to my favorites and contacted agents
-                quickly. Highly recommended for FUTO students.”
-              </p>
-              <footer className="mt-4 text-xs text-gray-500">
-                — Emmanuel C., Software Engineering
-              </footer>
-            </motion.blockquote>
-          </motion.div>
+          {/* Row 2: Moving Right */}
+          <div className="relative flex overflow-x-hidden w-full mask-gradient-x py-1">
+            <div className="animate-marquee-right flex gap-6">
+              {/* First Set of Cards */}
+              {row2Testimonials.map((t, idx) => (
+                <div key={`r2-${idx}`} className="w-[300px] sm:w-[350px] shrink-0 rounded-2xl bg-white dark:bg-[#0f1d2e] border border-black/5 dark:border-white/10 p-6 shadow-sm flex flex-col justify-between hover:border-gold/30 transition-colors">
+                  <p className="text-sm text-gray-700 dark:text-gray-300 italic leading-relaxed">
+                    “{t.text}”
+                  </p>
+                  <div className="mt-4 flex items-center gap-3 border-t border-black/5 dark:border-white/5 pt-3">
+                    <div className="h-8 w-8 rounded-full bg-gold/15 flex items-center justify-center text-xs font-bold text-gold shrink-0">
+                      {t.name[0]}
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-navy dark:text-white">{t.name}</p>
+                      <p className="text-[10px] text-gray-500 dark:text-gray-400">{t.dept}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {/* Duplicate Set for Seamless Loop */}
+              {row2Testimonials.map((t, idx) => (
+                <div key={`r2-dup-${idx}`} className="w-[300px] sm:w-[350px] shrink-0 rounded-2xl bg-white dark:bg-[#0f1d2e] border border-black/5 dark:border-white/10 p-6 shadow-sm flex flex-col justify-between hover:border-gold/30 transition-colors">
+                  <p className="text-sm text-gray-700 dark:text-gray-300 italic leading-relaxed">
+                    “{t.text}”
+                  </p>
+                  <div className="mt-4 flex items-center gap-3 border-t border-black/5 dark:border-white/5 pt-3">
+                    <div className="h-8 w-8 rounded-full bg-gold/15 flex items-center justify-center text-xs font-bold text-gold shrink-0">
+                      {t.name[0]}
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-navy dark:text-white">{t.name}</p>
+                      <p className="text-[10px] text-gray-500 dark:text-gray-400">{t.dept}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </motion.section>
+
+
 
       <motion.section
         initial="hidden"
