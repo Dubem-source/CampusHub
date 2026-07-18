@@ -596,7 +596,7 @@ export default function Home() {
         variants={fadeUp}
         className="w-full pb-20 overflow-hidden"
       >
-        <div className="mx-auto max-w-7xl px-6 md:px-8 lg:px-10 text-center mb-12">
+        <div className="mx-auto max-w-7xl px-6 md:px-8 lg:px-10 text-center mb-12 mt-16 md:mt-0">
           <h2 className="text-3xl font-extrabold text-navy dark:text-white tracking-tight">
             What students say
           </h2>
