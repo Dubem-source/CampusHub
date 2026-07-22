@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "react-hot-toast";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   User,
   Users,
@@ -50,7 +51,7 @@ import { Button } from "@/components/ui/button";
 import { StudentSidebar } from "@/components/student/StudentSidebar";
 import { useSidebar } from "@/components/ui/sidebar";
 import { db } from "@/lib/firebase";
-import { collection, query, where, onSnapshot, doc, deleteDoc, setDoc } from "firebase/firestore";
+import { collection, query, where, onSnapshot, doc, deleteDoc, setDoc, getDoc } from "firebase/firestore";
 import {
   formatNaira,
   RoomUnit,
@@ -68,19 +69,6 @@ import {
 
 import { RoommateNoticeboardContent } from "@/components/student/RoommateNoticeboardContent";
 
-// --- Mock Data & Constants ---
-
-const MOCK_STUDENT = {
-  id: 'stu1',
-  full_name: 'Chiamaka Okafor',
-  email: 'chiamaka@example.com',
-  phone: '08012345678',
-  avatar_url: '',
-  department: 'Computer Science',
-  level: '300',
-  university: 'FUTO',
-  gender: 'Female'
-};
 
 // Saved rooms and notifications are fetched from Firestore — no mock arrays.
 
@@ -183,6 +171,7 @@ function CustomSelect<T extends string | number>({
   );
 }
 
+
 type Section = 'profile' | 'saved' | 'recent' | 'notifications' | 'roommates' | 'settings' | 'marketplace' | 'services';
 
 function SearchParamsSync({
@@ -223,21 +212,34 @@ function StudentDashboardContent() {
   const { user, profile, loading: authLoading, logout: handleFirebaseLogout } = useAuth();
   const { toggleSidebar } = useSidebar();
   const [activeSection, setActiveSection] = useState<Section>('profile');
-  const [student, setStudent] = useState(MOCK_STUDENT);
+  const [student, setStudent] = useState({
+    id: '',
+    full_name: '',
+    email: '',
+    phone: '',
+    avatar_url: '',
+    department: '',
+    level: '',
+    university: 'FUTO',
+    gender: '',
+  });
   const [isEditing, setIsEditing] = useState(false);
 
-  // Sync profile document updates from Firestore in real-time
+  // ── Sync ALL profile fields from Firestore in real-time — strictly current user only ──
   useEffect(() => {
-    if (profile) {
-      setStudent(prev => ({
-        ...prev,
-        id: profile.uid,
-        full_name: profile.fullName || prev.full_name,
-        email: profile.email || prev.email,
-        phone: profile.phone || prev.phone,
-      }));
-    }
-  }, [profile]);
+    if (!profile || !user || profile.uid !== user.uid) return;
+    setStudent({
+      id: profile.uid,
+      full_name: profile.fullName || '',
+      email: profile.email || '',
+      phone: profile.phone || '',
+      avatar_url: (profile as any).photoURL || (profile as any).avatar_url || '',
+      department: (profile as any).department || '',
+      level: (profile as any).level || '',
+      university: 'FUTO',
+      gender: (profile as any).gender || '',
+    });
+  }, [profile, user]);
 
   // ── Route Guard: must be logged in AND be a student ──
   useEffect(() => {
@@ -263,6 +265,28 @@ function StudentDashboardContent() {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [recentRooms, setRecentRooms] = useState<{ room: RoomUnit; lodge: Lodge }[]>([]);
   const [isDark, setIsDark] = useState(false);
+
+  // Student Delete Confirmation Modal state
+  const [studentDeleteModal, setStudentDeleteModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    description: string;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: "",
+    description: "",
+    onConfirm: () => {},
+  });
+
+  const requestDeleteConfirm = (title: string, description: string, onConfirm: () => void) => {
+    setStudentDeleteModal({
+      isOpen: true,
+      title,
+      description,
+      onConfirm,
+    });
+  };
   const mainRef = useRef<HTMLElement | null>(null);
   const [mounted, setMounted] = useState(false);
   // Loading states defined below to avoid TDZ for filters
@@ -661,60 +685,75 @@ function StudentDashboardContent() {
     }
   };
 
-  // Recently viewed rooms — stored in localStorage as room IDs only (non-sensitive browsing history)
+  // Recently viewed rooms — loaded from localStorage and Firestore
   useEffect(() => {
-    const LOCAL_STORAGE_KEY = 'campus_recent';
-    const recentIds = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || '[]') as string[];
-    // Recent rooms will be fetched from Firestore rooms collection
-    // For now, just clear any stale mock IDs from pre-launch
-    if (recentIds.some((id: string) => id.startsWith('room-ig') || id.startsWith('room-es') || id.startsWith('room-cv') || id.startsWith('room-at'))) {
-      localStorage.removeItem(LOCAL_STORAGE_KEY);
+    const fetchRecentRooms = async () => {
+      setRecentRoomsLoading(true);
+      try {
+        const LOCAL_STORAGE_KEY = 'campus_recent_rooms';
+        const recentItems = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || '[]') as Array<{
+          roomId: string;
+          lodgeSlug: string;
+          viewedAt: number;
+        }>;
+
+        if (recentItems.length === 0) {
+          setRecentRooms([]);
+          setRecentRoomsLoading(false);
+          return;
+        }
+
+        const fetched: { room: RoomUnit; lodge: Lodge }[] = [];
+        for (const item of recentItems) {
+          try {
+            const roomDoc = await getDoc(doc(db, "rooms", item.roomId));
+            if (roomDoc.exists()) {
+              const room = roomDoc.data() as RoomUnit;
+              const lodgeDoc = await getDoc(doc(db, "lodges", item.lodgeSlug || room.lodgeSlug));
+              const lodge = lodgeDoc.exists() ? (lodgeDoc.data() as Lodge) : {
+                id: item.lodgeSlug,
+                name: (room as any).building_name || room.roomType || "Lodge",
+                slug: item.lodgeSlug || "lodge",
+                area: room.area || "Eziobodo",
+                landmark: (room as any).landmark || "",
+                buildingAmenities: room.amenities || [],
+                agentId: room.agentId || "",
+                agentName: "Agent",
+                agentPhoto: "",
+                agentPhone: "",
+                rating: 5,
+                roomsCount: 1
+              };
+              fetched.push({ room, lodge });
+            }
+          } catch (e) {
+            console.error("Error loading recent room doc:", e);
+          }
+        }
+        setRecentRooms(fetched);
+      } catch (err) {
+        console.error("Error fetching recently viewed rooms:", err);
+      } finally {
+        setRecentRoomsLoading(false);
+      }
+    };
+
+    if (activeSection === 'recent' || activeSection === 'profile') {
+      fetchRecentRooms();
     }
-    setRecentRooms([]);
-  }, []);
+  }, [activeSection]);
 
   // Sync student details, notifications, and clear agent logged in status on mount
   useEffect(() => {
     localStorage.removeItem("agent_logged_in");
     localStorage.setItem("student_logged_in", "true");
-    localStorage.setItem("user_role", "student");
-    window.dispatchEvent(new Event("agent-data-updated"));
-    window.dispatchEvent(new Event("student-data-updated"));
-
     const savedTab = localStorage.getItem("student_dashboard_tab");
     if (savedTab) {
       setActiveSection(savedTab as Section);
       localStorage.removeItem("student_dashboard_tab");
     }
 
-    const saved = localStorage.getItem("student_data");
-    if (saved) {
-      try {
-        setStudent(JSON.parse(saved));
-      } catch (e) {
-        console.error("Failed to parse student_data", e);
-      }
-    } else {
-      localStorage.setItem("student_data", JSON.stringify(MOCK_STUDENT));
-    }
-
-    const savedPrefs = localStorage.getItem("student_settings_prefs");
-    if (savedPrefs) {
-      try {
-        const parsed = JSON.parse(savedPrefs);
-        if (parsed.prefGender) setPrefGender(parsed.prefGender);
-        if (parsed.prefBudget) setPrefBudget(parsed.prefBudget);
-        if (parsed.prefLocation) setPrefLocation(parsed.prefLocation);
-        if (parsed.privacyProfilePublic !== undefined) setPrivacyProfilePublic(parsed.privacyProfilePublic);
-        if (parsed.privacyPhonePublic !== undefined) setPrivacyPhonePublic(parsed.privacyPhonePublic);
-        if (parsed.notifyMatches !== undefined) setNotifyMatches(parsed.notifyMatches);
-        if (parsed.notifyWhatsApp !== undefined) setNotifyWhatsApp(parsed.notifyWhatsApp);
-      } catch (e) {
-        console.error("Failed to parse student_settings_prefs", e);
-      }
-    }
-
-    // Subscribe to student notifications from Firestore
+    // Subscribe to student notifications from Firestore — strictly scoped to this user's uid
     if (user) {
       const notifsUnsub = onSnapshot(
         query(collection(db, "notifications"), where("uid", "==", user.uid)),
@@ -726,6 +765,81 @@ function StudentDashboardContent() {
       return () => notifsUnsub();
     }
   }, [user]);
+
+  // Sync profile details from Firestore
+  useEffect(() => {
+    if (profile) {
+      setStudent(prev => ({
+        ...prev,
+        full_name: profile.fullName || prev.full_name,
+        phone: profile.phone || prev.phone,
+        department: profile.department || prev.department || "",
+        level: profile.level || prev.level || "",
+        gender: profile.gender || prev.gender || "",
+        email: profile.email || prev.email,
+      }));
+    }
+  }, [profile]);
+
+  // Step-by-step Onboarding Modal for New Students
+  const [showOnboardingModal, setShowOnboardingModal] = useState(false);
+  const [onboardingStep, setOnboardingStep] = useState(1);
+  const [onboardingForm, setOnboardingForm] = useState({
+    phone: "",
+    department: "",
+    level: "",
+    gender: "",
+  });
+
+  useEffect(() => {
+    if (profile && profile.role === "student") {
+      const isMissing = !profile.phone || !profile.department || !profile.level || !profile.gender;
+      if (isMissing) {
+        setShowOnboardingModal(true);
+        setOnboardingForm({
+          phone: profile.phone || "",
+          department: profile.department || "",
+          level: profile.level || "",
+          gender: profile.gender || "",
+        });
+      } else {
+        setShowOnboardingModal(false);
+      }
+    }
+  }, [profile]);
+
+  const handleCompleteOnboardingSubmit = async () => {
+    if (!user) return;
+    try {
+      const updates = {
+        phone: onboardingForm.phone,
+        department: onboardingForm.department,
+        level: onboardingForm.level,
+        gender: onboardingForm.gender,
+      };
+      await setDoc(doc(db, "users", user.uid), updates, { merge: true });
+      await setDoc(doc(db, "profiles", user.uid), updates, { merge: true });
+      setShowOnboardingModal(false);
+      toast.success("Profile 100% Complete! Verified Student Badge Unlocked 🎉");
+    } catch (err) {
+      console.error("Error saving onboarding details:", err);
+      toast.error("Failed to save profile.");
+    }
+  };
+
+  const profileCompletion = React.useMemo(() => {
+    const fields = [
+      { name: "Full Name", val: profile?.fullName || student.full_name },
+      { name: "Phone Number", val: profile?.phone || student.phone },
+      { name: "Department", val: profile?.department || student.department },
+      { name: "Level", val: profile?.level || student.level },
+      { name: "Gender", val: profile?.gender || student.gender },
+    ];
+    const completed = fields.filter(f => f.val && String(f.val).trim().length > 0);
+    const percentage = Math.round((completed.length / fields.length) * 100);
+    const missing = fields.filter(f => !f.val || String(f.val).trim().length === 0).map(f => f.name);
+    return { percentage, missing };
+  }, [profile, student]);
 
   // Subscribe to saved rooms from Firestore savedRooms collection
   useEffect(() => {
@@ -807,11 +921,27 @@ function StudentDashboardContent() {
     toast.success(`${tabName} updated successfully`);
   };
 
-  const handleUpdateStudentProfile = (e: React.FormEvent) => {
+  const handleUpdateStudentProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    localStorage.setItem("student_data", JSON.stringify(student));
-    window.dispatchEvent(new Event("student-data-updated"));
-    toast.success("Profile settings updated successfully");
+    if (user) {
+      try {
+        const updates = {
+          fullName: student.full_name,
+          phone: student.phone,
+          department: student.department,
+          level: student.level,
+          gender: student.gender,
+        };
+        await setDoc(doc(db, "users", user.uid), updates, { merge: true });
+        await setDoc(doc(db, "profiles", user.uid), updates, { merge: true });
+        toast.success("Profile saved! Your verification status has been updated.");
+      } catch (err) {
+        console.error("Error saving profile:", err);
+        toast.error("Failed to save profile changes.");
+      }
+    } else {
+      toast.success("Profile updated locally");
+    }
   };
 
   const [passwordForm, setPasswordForm] = useState({ current: "", new: "", confirm: "" });
@@ -829,9 +959,7 @@ function StudentDashboardContent() {
     setPasswordForm({ current: "", new: "", confirm: "" });
   };
 
-  const removeSavedRoom = async (docId: string, e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const performRemoveSavedRoom = async (docId: string) => {
     try {
       await deleteDoc(doc(db, "savedRooms", docId));
       toast.success("Room removed from saved");
@@ -839,6 +967,16 @@ function StudentDashboardContent() {
       console.error("Failed to remove saved room:", err);
       toast.error("Could not remove. Please try again.");
     }
+  };
+
+  const removeSavedRoom = (docId: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    requestDeleteConfirm(
+      "Remove Saved Room",
+      "Are you sure you want to remove this room from your saved rooms list?",
+      () => performRemoveSavedRoom(docId)
+    );
   };
 
   const markAsRead = (id: number) => {
@@ -915,7 +1053,7 @@ function StudentDashboardContent() {
         <div className="flex lg:hidden items-center justify-between bg-white dark:bg-[#0f1d2e] text-navy dark:text-white px-6 py-4 border-b border-black/5 dark:border-white/10 shadow-sm z-40">
           <div className="flex items-center gap-2">
             <Image
-              src="/image/Campus-Hub.png"
+              src="/image/Campus-Hub2.png"
               alt="Campus-Hub Logo"
               width={32}
               height={32}
@@ -1063,6 +1201,32 @@ function StudentDashboardContent() {
                     Find Roommates
                   </button>
                 </div>
+              </div>
+            )}
+
+            {/* Profile Completion Progress Card (Only shown if profile is NOT 100% complete) */}
+            {activeSection === 'profile' && profileCompletion.percentage < 100 && (
+              <div className="mb-6 bg-gradient-to-r from-[#0f1d2e] via-[#162535] to-[#0f1d2e] p-5 md:p-6 rounded-3xl border border-gold/30 shadow-md text-white flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div className="space-y-1.5 flex-1 text-left">
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-extrabold text-sm sm:text-base text-white">Profile Completion: {profileCompletion.percentage}%</h3>
+                  </div>
+                  <p className="text-xs text-gray-300">
+                    Add your <span className="text-gold font-bold">{profileCompletion.missing.join(", ")}</span> to hit 100% and activate your <strong>Verified Student Badge</strong>!
+                  </p>
+                  <div className="w-full max-w-md bg-white/10 rounded-full h-2 mt-2 overflow-hidden">
+                    <div className="bg-gold h-full rounded-full transition-all duration-500" style={{ width: `${profileCompletion.percentage}%` }} />
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setOnboardingStep(1);
+                    setShowOnboardingModal(true);
+                  }}
+                  className="bg-gold text-navy font-extrabold text-xs px-5 py-3 rounded-xl hover:bg-gold/90 border-0 cursor-pointer shrink-0 transition shadow-md"
+                >
+                  Complete Profile Now
+                </button>
               </div>
             )}
 
@@ -1318,9 +1482,10 @@ function StudentDashboardContent() {
                                   <button
                                     onClick={(e) => removeSavedRoom(docId, e)}
                                     type="button"
-                                    className="absolute right-4 top-4 z-20 flex h-10 w-10 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur transition hover:bg-white hover:text-red-500"
+                                    className="absolute right-4 top-4 z-20 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-rose-500 shadow-md backdrop-blur transition hover:bg-white hover:scale-110 cursor-pointer"
+                                    title="Remove from Saved Rooms"
                                   >
-                                    <Heart className="h-4 w-4 fill-current" />
+                                    <Heart className="h-5 w-5 fill-rose-500 text-rose-500" />
                                   </button>
 
                                   <div className="absolute bottom-4 left-4 z-10">
@@ -1678,10 +1843,11 @@ function StudentDashboardContent() {
                                     <div className="space-y-1.5">
                                       <label className="text-xs font-bold uppercase tracking-wider text-gray-400">Academic Level</label>
                                       <select
-                                        value={student.level}
+                                        value={student.level || ''}
                                         onChange={(e) => setStudent({ ...student, level: e.target.value })}
                                         className="w-full rounded-xl bg-gray-50 dark:bg-[#162535] text-navy dark:text-white px-4 py-3.5 text-sm ring-1 ring-black/5 dark:ring-white/5 focus:ring-2 focus:ring-gold outline-none"
                                       >
+                                        <option value="">Select Level...</option>
                                         {['100', '200', '300', '400', '500'].map(lvl => (
                                           <option key={lvl} value={lvl}>{lvl} Level</option>
                                         ))}
@@ -1690,7 +1856,7 @@ function StudentDashboardContent() {
                                     <div className="space-y-1.5">
                                       <label className="text-xs font-bold uppercase tracking-wider text-gray-400">Gender</label>
                                       <select
-                                        value={student.gender || 'Female'}
+                                        value={student.gender || ''}
                                         onChange={(e) => setStudent({ ...student, gender: e.target.value })}
                                         className="w-full rounded-xl bg-gray-50 dark:bg-[#162535] text-navy dark:text-white px-4 py-3.5 text-sm ring-1 ring-black/5 dark:ring-white/5 focus:ring-2 focus:ring-gold outline-none"
                                       >
@@ -2995,7 +3161,7 @@ function StudentDashboardContent() {
               className="fixed inset-0 m-auto h-fit max-h-[90vh] w-full max-w-sm bg-white dark:bg-[#0f1d2e] rounded-[2.5rem] border border-black/5 dark:border-white/5 z-50 p-6 text-center shadow-2xl flex flex-col items-center space-y-4"
             >
               <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-gold/10 text-gold shadow-sm">
-                <Sparkles className="h-6 w-6" />
+                <ShoppingBag className="h-6 w-6" />
               </div>
               <div className="space-y-1">
                 <h3 className="text-xl font-extrabold text-navy dark:text-white">Coming Soon!</h3>
@@ -3004,7 +3170,7 @@ function StudentDashboardContent() {
                 </p>
               </div>
               <div className="p-3.5 rounded-2xl bg-gold/5 border border-gold/10 text-left text-[11px] text-gold font-medium leading-relaxed">
-                💡 <strong>Vetted Sellers Mode:</strong> Only manually approved merchants can list items for now. If you are a student seller, contact the admin to verify your account and list your items!
+                <strong>Vetted Sellers Mode:</strong> Only manually approved merchants can list items for now. If you are a student seller, contact the admin to verify your account and list your items!
               </div>
               <div className="flex flex-col w-full gap-2 pt-2">
                 <a
@@ -3027,9 +3193,275 @@ function StudentDashboardContent() {
           </>
         )}
       </AnimatePresence>
+
+      {/* ── Step-by-Step Student Onboarding Modal ────────────────────────────── */}
+      <AnimatePresence>
+        {showOnboardingModal && (
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white dark:bg-[#0f1d2e] rounded-3xl border border-black/5 dark:border-white/10 shadow-2xl p-6 sm:p-8 w-full max-w-md text-left relative overflow-hidden"
+            >
+              <div className="flex items-center justify-between border-b border-black/5 dark:border-white/10 pb-4 mb-5">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-gold/10 flex items-center justify-center text-gold">
+                    <GraduationCap className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-extrabold text-navy dark:text-white text-base">Complete Profile</h3>
+                    <p className="text-xs text-muted-foreground">Step {onboardingStep} of 4</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowOnboardingModal(false)}
+                  className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 text-gray-400 hover:text-navy dark:hover:text-white transition"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Step Progress Bar */}
+              <div className="w-full bg-gray-100 dark:bg-white/10 rounded-full h-1.5 mb-6 overflow-hidden">
+                <div
+                  className="bg-gold h-full rounded-full transition-all duration-300"
+                  style={{ width: `${(onboardingStep / 4) * 100}%` }}
+                />
+              </div>
+
+              {/* Step 1: Phone Number */}
+              {onboardingStep === 1 && (
+                <motion.div
+                  key="step1"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  className="space-y-5"
+                >
+                  <div>
+                    <h4 className="font-bold text-navy dark:text-white text-base">What is your Phone Number?</h4>
+                    <p className="text-xs text-muted-foreground mt-1">Used for roommate matching and important campus notifications.</p>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Phone Number</label>
+                    <input
+                      type="tel"
+                      autoFocus
+                      value={onboardingForm.phone}
+                      onChange={(e) => setOnboardingForm({ ...onboardingForm, phone: e.target.value })}
+                      placeholder="e.g. 08012345678"
+                      className="w-full p-4 rounded-xl border border-gray-300 dark:border-white/10 bg-white dark:bg-white/5 text-navy dark:text-white font-semibold text-sm outline-none focus:ring-2 focus:ring-gold"
+                    />
+                  </div>
+                  <Button
+                    disabled={!onboardingForm.phone.trim()}
+                    onClick={() => setOnboardingStep(2)}
+                    className="w-full h-12 rounded-xl bg-gold hover:bg-gold/90 text-navy font-extrabold text-sm shadow-md border-0 cursor-pointer flex items-center justify-center gap-2"
+                  >
+                    Next Step <ChevronRight size={18} />
+                  </Button>
+                </motion.div>
+              )}
+
+              {/* Step 2: Department */}
+              {onboardingStep === 2 && (
+                <motion.div
+                  key="step2"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  className="space-y-5"
+                >
+                  <div>
+                    <h4 className="font-bold text-navy dark:text-white text-base">What is your Department?</h4>
+                    <p className="text-xs text-muted-foreground mt-1">Enter your field of study at FUTO (e.g. Computer Science, Mechanical Eng).</p>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Department</label>
+                    <input
+                      type="text"
+                      autoFocus
+                      value={onboardingForm.department}
+                      onChange={(e) => setOnboardingForm({ ...onboardingForm, department: e.target.value })}
+                      placeholder="e.g. Computer Science (CSC)"
+                      className="w-full p-4 rounded-xl border border-gray-300 dark:border-white/10 bg-white dark:bg-white/5 text-navy dark:text-white font-semibold text-sm outline-none focus:ring-2 focus:ring-gold"
+                    />
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Button
+                      variant="outline"
+                      onClick={() => setOnboardingStep(1)}
+                      className="h-12 px-5 rounded-xl border-gray-200 dark:border-white/10 text-navy dark:text-white font-semibold text-xs"
+                    >
+                      Back
+                    </Button>
+                    <Button
+                      disabled={!onboardingForm.department.trim()}
+                      onClick={() => setOnboardingStep(3)}
+                      className="flex-1 h-12 rounded-xl bg-gold hover:bg-gold/90 text-navy font-extrabold text-sm shadow-md border-0 cursor-pointer flex items-center justify-center gap-2"
+                    >
+                      Next Step <ChevronRight size={18} />
+                    </Button>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Step 3: Academic Level */}
+              {onboardingStep === 3 && (
+                <motion.div
+                  key="step3"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  className="space-y-5"
+                >
+                  <div>
+                    <h4 className="font-bold text-navy dark:text-white text-base">Select Your Academic Level</h4>
+                    <p className="text-xs text-muted-foreground mt-1">Choose your current year of study.</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    {["100 Level", "200 Level", "300 Level", "400 Level", "500 Level", "Postgraduate"].map((lvl) => {
+                      const lvlVal = lvl.split(" ")[0];
+                      const selected = onboardingForm.level === lvlVal;
+                      return (
+                        <button
+                          key={lvl}
+                          type="button"
+                          onClick={() => setOnboardingForm({ ...onboardingForm, level: lvlVal })}
+                          className={cn(
+                            "p-3.5 rounded-xl border-2 font-bold text-xs transition text-center cursor-pointer",
+                            selected
+                              ? "border-gold bg-gold/10 text-gold"
+                              : "border-gray-200 dark:border-white/10 text-navy dark:text-white hover:border-gold/50"
+                          )}
+                        >
+                          {lvl}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Button
+                      variant="outline"
+                      onClick={() => setOnboardingStep(2)}
+                      className="h-12 px-5 rounded-xl border-gray-200 dark:border-white/10 text-navy dark:text-white font-semibold text-xs"
+                    >
+                      Back
+                    </Button>
+                    <Button
+                      disabled={!onboardingForm.level}
+                      onClick={() => setOnboardingStep(4)}
+                      className="flex-1 h-12 rounded-xl bg-gold hover:bg-gold/90 text-navy font-extrabold text-sm shadow-md border-0 cursor-pointer flex items-center justify-center gap-2"
+                    >
+                      Next Step <ChevronRight size={18} />
+                    </Button>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Step 4: Gender */}
+              {onboardingStep === 4 && (
+                <motion.div
+                  key="step4"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  className="space-y-5"
+                >
+                  <div>
+                    <h4 className="font-bold text-navy dark:text-white text-base">Select Your Gender</h4>
+                    <p className="text-xs text-muted-foreground mt-1">Required for roommate matching.</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    {["Male", "Female"].map((g) => {
+                      const selected = onboardingForm.gender === g;
+                      return (
+                        <button
+                          key={g}
+                          type="button"
+                          onClick={() => setOnboardingForm({ ...onboardingForm, gender: g })}
+                          className={cn(
+                            "p-5 rounded-2xl border-2 font-bold text-sm transition flex flex-col items-center justify-center gap-3 cursor-pointer",
+                            selected
+                              ? "border-gold bg-gold/10 text-gold shadow-md"
+                              : "border-gray-200 dark:border-white/10 text-navy dark:text-white hover:border-gold/50"
+                          )}
+                        >
+                          <div className={cn(
+                            "w-12 h-12 rounded-xl flex items-center justify-center transition-colors",
+                            selected ? "bg-gold/20 text-gold" : "bg-gray-100 dark:bg-white/5 text-gray-400"
+                          )}>
+                            <User className="h-6 w-6" />
+                          </div>
+                          <span className="tracking-wide">{g}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Button
+                      variant="outline"
+                      onClick={() => setOnboardingStep(3)}
+                      className="h-12 px-5 rounded-xl border-gray-200 dark:border-white/10 text-navy dark:text-white font-semibold text-xs"
+                    >
+                      Back
+                    </Button>
+                    <Button
+                      disabled={!onboardingForm.gender}
+                      onClick={handleCompleteOnboardingSubmit}
+                      className="flex-1 h-12 rounded-xl bg-gold hover:bg-gold/90 text-navy font-extrabold text-sm shadow-md border-0 cursor-pointer flex items-center justify-center gap-2"
+                    >
+                      Complete Profile
+                    </Button>
+                  </div>
+                </motion.div>
+              )}
+
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Student Delete Confirmation Modal ────────────────────────────── */}
+      <Dialog open={studentDeleteModal.isOpen} onOpenChange={(open) => !open && setStudentDeleteModal(prev => ({ ...prev, isOpen: false }))}>
+        <DialogContent className="max-w-md bg-white dark:bg-[#0f1d2e] rounded-3xl border border-black/5 dark:border-white/10 p-6 shadow-2xl">
+          <DialogHeader className="space-y-2 text-left">
+            <div className="w-12 h-12 rounded-2xl bg-rose-500/10 text-rose-500 flex items-center justify-center mb-2">
+              <Trash2 size={24} />
+            </div>
+            <DialogTitle className="text-lg font-bold text-navy dark:text-white">
+              {studentDeleteModal.title || "Confirm Deletion"}
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground leading-relaxed">
+              {studentDeleteModal.description || "Are you sure you want to delete this item? This action cannot be undone."}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex gap-3 pt-4">
+            <Button
+              variant="outline"
+              onClick={() => setStudentDeleteModal(prev => ({ ...prev, isOpen: false }))}
+              className="flex-1 rounded-xl border-gray-200 dark:border-white/10 text-xs font-bold"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                studentDeleteModal.onConfirm();
+                setStudentDeleteModal(prev => ({ ...prev, isOpen: false }));
+              }}
+              className="flex-1 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold"
+            >
+              Yes, Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
+
 
 export default function StudentDashboard() {
   return <StudentDashboardContent />;

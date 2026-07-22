@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "react-hot-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { db } from "@/lib/firebase";
-import { collection, doc, getDocs, addDoc } from "firebase/firestore";
+import { collection, doc, getDocs, addDoc, deleteDoc, onSnapshot } from "firebase/firestore";
 import {
   Search,
   Calendar,
@@ -19,6 +19,7 @@ import {
   BookOpen,
   Wallet,
   Users,
+  Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -51,119 +52,9 @@ export type ConnectionRequest = {
   status: "pending" | "accepted" | "declined";
 };
 
-// --- Mock Data ---
-
-const initialPosts: RoommatePost[] = [
-  {
-    id: "post1",
-    student_id: "stu2",
-    student_name: "Emeka Uche",
-    phone: "08034567890",
-    department: "Civil Engineering",
-    level: "400",
-    budget_range: "₦150,000 – ₦200,000",
-    area_preference: "Ihiagwa",
-    gender_preference: "Male only",
-    extra_info:
-      "Looking for a quiet and clean roommate. I spend most of my time in the studio.",
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2), // 2 days ago
-    status: "active",
-    student_gender: "Male",
-  },
-  {
-    id: "post2",
-    student_id: "stu3",
-    student_name: "Chiamaka Okafor",
-    phone: "08012345678",
-    department: "Computer Science",
-    level: "300",
-    budget_range: "₦80,000 – ₦120,000",
-    area_preference: "Eziobodo",
-    gender_preference: "Female only",
-    extra_info:
-      "Need someone who is okay with late night coding sessions and early morning classes.",
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5), // 5 days ago
-    status: "active",
-    student_gender: "Female",
-  },
-  {
-    id: "post3",
-    student_id: "stu4",
-    student_name: "Daniel Peters",
-    phone: "08055566677",
-    department: "Biological Sciences",
-    level: "100",
-    budget_range: "₦50,000 – ₦80,000",
-    area_preference: "Umuchima",
-    gender_preference: "Any",
-    extra_info:
-      "Freshman looking for a friendly roommate to navigate FUTO life with.",
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 10), // 10 days ago
-    status: "active",
-    student_gender: "Male",
-  },
-  {
-    id: "post4",
-    student_id: "stu5",
-    student_name: "Adaeze Nwosu",
-    phone: "08099887766",
-    department: "Mechanical Engineering",
-    level: "200",
-    budget_range: "₦120,000 – ₦150,000",
-    area_preference: "FUTO",
-    gender_preference: "Female only",
-    extra_info:
-      "I have a place already in Ihiagwa Gardens. Just need a flatmate to share costs.",
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 1), // 1 day ago
-    status: "active",
-    student_gender: "Female",
-  },
-  {
-    id: "post5",
-    student_id: "stu6",
-    student_name: "Kelechi Egwu",
-    phone: "07011223344",
-    department: "Physics",
-    level: "500",
-    budget_range: "₦100,000 – ₦130,000",
-    area_preference: "Eziobodo",
-    gender_preference: "Male only",
-    extra_info:
-      "Final year student. Very focused on project. Need a mature roommate.",
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 32), // 32 days ago (Expired)
-    status: "active",
-    student_gender: "Male",
-  },
-  {
-    id: "post6",
-    student_id: "stu1", // OWN POST
-    student_name: "Chiamaka Okafor", // Simulation
-    phone: "08012345678",
-    department: "Computer Science",
-    level: "300",
-    budget_range: "₦100,000 – ₦150,000",
-    area_preference: "Ihiagwa",
-    gender_preference: "Female only",
-    extra_info:
-      "Looking for a roommate for the next session. I am very organized.",
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3), // 3 days ago
-    status: "active",
-    student_gender: "Female",
-  },
-];
-
-const initialRequests: ConnectionRequest[] = [
-  {
-    id: "req1",
-    postId: "post6", // Request for the current user's post
-    requesterId: "stu7",
-    requesterName: "Precious Obi",
-    requesterPhone: "08122334455",
-    requesterDept: "Architecture",
-    requesterLevel: "200",
-    status: "pending",
-  },
-];
+// --- Mock Data Placeholder (Removed in production) ---
+const initialPosts: RoommatePost[] = [];
+const initialRequests: ConnectionRequest[] = [];
 
 // --- Utilities ---
 
@@ -229,45 +120,85 @@ export function RoommateNoticeboardContent() {
     }
   }, [profile]);
 
-  // Fetch posts from database
+  // Live real-time subscription for roommate posts from Firestore
   useEffect(() => {
-    const fetchPosts = async () => {
-      setLoading(true);
-      try {
-        const querySnapshot = await getDocs(collection(db, "roommates"));
+    setLoading(true);
+    const unsubscribe = onSnapshot(
+      collection(db, "roommates"),
+      (snapshot) => {
         const postsList: RoommatePost[] = [];
-        querySnapshot.forEach((docSnap) => {
+        snapshot.forEach((docSnap) => {
           const data = docSnap.data();
           postsList.push({
             id: docSnap.id,
             student_id: data.student_id,
             student_name: data.student_name,
             phone: data.phone,
-            department: data.department,
-            level: data.level,
-            budget_range: data.budget_range,
-            area_preference: data.area_preference,
-            gender_preference: data.gender_preference,
-            extra_info: data.extra_info,
+            department: data.department || "",
+            level: data.level || "",
+            budget_range: data.budget_range || "",
+            area_preference: data.area_preference || "",
+            gender_preference: data.gender_preference || "Any",
+            extra_info: data.extra_info || "",
             created_at: data.created_at ? new Date(data.created_at) : new Date(),
             status: data.status || "active",
-            student_gender: data.student_gender || "Female",
+            student_gender: data.student_gender || "Other",
           });
         });
         setPosts(postsList);
-      } catch (err) {
-        console.error("Error fetching roommates:", err);
-      } finally {
+        setLoading(false);
+      },
+      (err) => {
+        console.error("Error subscribing to roommates collection:", err);
         setLoading(false);
       }
-    };
-    fetchPosts();
+    );
+
+    return () => unsubscribe();
   }, []);
+
+  const isProfileComplete = Boolean(
+    profile?.phone?.trim() &&
+    profile?.department?.trim() &&
+    profile?.level?.trim() &&
+    profile?.gender?.trim()
+  );
+
+  const handleOpenCreateModal = () => {
+    if (!user) {
+      toast.error("Please log in to post a roommate notice!");
+      return;
+    }
+    if (!isProfileComplete) {
+      toast.error("Please 100% complete your profile (Phone, Department, Level, Gender) before posting a roommate notice!");
+      return;
+    }
+    setIsCreateModalOpen(true);
+  };
+
+  const [deletePostId, setDeletePostId] = useState<string | null>(null);
+
+  const confirmDeleteRoommatePost = async () => {
+    if (!deletePostId) return;
+    try {
+      await deleteDoc(doc(db, "roommates", deletePostId));
+      toast.success("Roommate notice deleted!");
+    } catch (err) {
+      console.error("Error deleting post:", err);
+      toast.error("Failed to delete post.");
+    } finally {
+      setDeletePostId(null);
+    }
+  };
 
   const handleCreatePost = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!user) {
       toast.error("Please log in to post a roommate notice!");
+      return;
+    }
+    if (!isProfileComplete) {
+      toast.error("Please 100% complete your profile before posting!");
       return;
     }
     const formData = new FormData(e.currentTarget);
@@ -287,14 +218,7 @@ export function RoommateNoticeboardContent() {
     };
 
     try {
-      const docRef = await addDoc(collection(db, "roommates"), newPostData);
-      const createdPost: RoommatePost = {
-        id: docRef.id,
-        ...newPostData,
-        created_at: new Date(newPostData.created_at),
-        status: newPostData.status as "active" | "closed"
-      };
-      setPosts((prev) => [createdPost, ...prev]);
+      await addDoc(collection(db, "roommates"), newPostData);
       toast.success("Post notice created successfully!");
       setIsCreateModalOpen(false);
     } catch (err) {
@@ -335,6 +259,11 @@ export function RoommateNoticeboardContent() {
   };
 
   const filteredPosts = posts.filter((post) => {
+    // 48 hours expiry filter
+    const postTime = new Date(post.created_at).getTime();
+    const hoursOld = (Date.now() - postTime) / (1000 * 60 * 60);
+    if (hoursOld >= 48) return false;
+
     const matchGender =
       filters.gender === "Any" || post.gender_preference === filters.gender;
     const matchArea =
@@ -379,7 +308,7 @@ export function RoommateNoticeboardContent() {
               students at FUTO. Safe, private, and verified.
             </p>
             <button
-              onClick={() => setIsCreateModalOpen(true)}
+              onClick={handleOpenCreateModal}
               className="mt-8 inline-flex items-center gap-2 rounded-full bg-gold px-8 py-4 text-lg font-bold text-navy shadow-lg transition hover:scale-105 hover:bg-[#d7a93a] cursor-pointer"
             >
               <Plus className="h-5 w-5" />
@@ -529,9 +458,10 @@ export function RoommateNoticeboardContent() {
             }}
           >
             {filteredPosts.map((post) => {
-              const expiryDays = getExpiryDays(post.created_at);
-              const isExpired = expiryDays <= 0;
-              const isOwnPost = post.student_id === currentStudent.id;
+              const postTime = new Date(post.created_at).getTime();
+              const hoursOld = (Date.now() - postTime) / (1000 * 60 * 60);
+              const hoursLeft = Math.max(0, Math.ceil(48 - hoursOld));
+              const isOwnPost = user && (post.student_id === user.uid || post.student_id === profile?.uid);
               const isPending = sentRequestIds.includes(post.id);
 
               return (
@@ -542,8 +472,7 @@ export function RoommateNoticeboardContent() {
                     show: { opacity: 1, scale: 1 },
                   }}
                   className={cn(
-                    "group flex flex-col rounded-2xl bg-white dark:bg-[#0f1d2e] p-6 shadow-sm border border-black/5 dark:border-white/5 transition-all hover:shadow-md hover:-translate-y-1",
-                    isExpired && "opacity-60",
+                    "group flex flex-col rounded-2xl bg-white dark:bg-[#0f1d2e] p-6 shadow-sm border border-black/5 dark:border-white/5 transition-all hover:shadow-md hover:-translate-y-1 relative",
                     post.status === "closed" &&
                       "border-green-500/20 bg-green-50/10 dark:bg-green-950/10",
                   )}
@@ -562,19 +491,30 @@ export function RoommateNoticeboardContent() {
                         </p>
                       </div>
                     </div>
-                    {isExpired ? (
-                      <span className="rounded-full bg-gray-100 dark:bg-white/5 px-2.5 py-1 text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">
-                        Expired
-                      </span>
-                    ) : post.status === "closed" ? (
-                      <span className="rounded-full bg-green-100 dark:bg-green-950/20 px-2.5 py-1 text-[10px] font-bold text-green-600 dark:text-green-400 uppercase tracking-widest">
-                        Matched
-                      </span>
-                    ) : (
-                      <span className="rounded-full bg-gold/10 px-2.5 py-1 text-[10px] font-bold text-gold uppercase tracking-widest">
-                        Expires in {expiryDays}d
-                      </span>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {post.status === "closed" ? (
+                        <span className="rounded-full bg-green-100 dark:bg-green-950/20 px-2.5 py-1 text-[10px] font-bold text-green-600 dark:text-green-400 uppercase tracking-widest">
+                          Matched
+                        </span>
+                      ) : (
+                        <span className="rounded-full bg-gold/10 px-2.5 py-1 text-[10px] font-bold text-gold uppercase tracking-widest">
+                          Expires in {hoursLeft}h
+                        </span>
+                      )}
+                      {isOwnPost && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeletePostId(post.id);
+                          }}
+                          className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-500/10 transition cursor-pointer border-0"
+                          title="Delete your post"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   <div className="mt-6 space-y-3 flex-1 text-left">
@@ -611,10 +551,6 @@ export function RoommateNoticeboardContent() {
                       <div className="flex h-[44px] items-center justify-center text-sm font-semibold text-green-600">
                         Already Matched
                       </div>
-                    ) : isExpired ? (
-                      <div className="flex h-[44px] items-center justify-center text-sm font-semibold text-gray-400">
-                        Post no longer active
-                      </div>
                     ) : isPending ? (
                       <button
                         disabled
@@ -648,7 +584,7 @@ export function RoommateNoticeboardContent() {
               roommate!
             </p>
             <button
-              onClick={() => setIsCreateModalOpen(true)}
+              onClick={handleOpenCreateModal}
               className="mt-8 rounded-full bg-gold px-8 py-3 font-bold text-navy cursor-pointer"
             >
               Create Post
@@ -827,6 +763,46 @@ export function RoommateNoticeboardContent() {
               >
                 Close
               </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Delete Confirmation Modal */}
+      <AnimatePresence>
+        {deletePostId && (
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-sm rounded-3xl bg-white dark:bg-[#0f1d2e] p-6 text-center shadow-2xl border border-black/5 dark:border-white/10"
+            >
+              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-rose-500/10 text-rose-500">
+                <Trash2 className="h-7 w-7" />
+              </div>
+              <h3 className="text-lg font-extrabold text-navy dark:text-white">
+                Delete Roommate Post?
+              </h3>
+              <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
+                Are you sure you want to delete this roommate notice? This action cannot be undone.
+              </p>
+              <div className="mt-6 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setDeletePostId(null)}
+                  className="flex-1 rounded-xl border border-gray-200 dark:border-white/10 py-3 text-xs font-bold text-navy dark:text-white transition hover:bg-gray-50 dark:hover:bg-white/5 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmDeleteRoommatePost}
+                  className="flex-1 rounded-xl bg-rose-600 hover:bg-rose-700 py-3 text-xs font-bold text-white shadow-md transition cursor-pointer border-0"
+                >
+                  Yes, Delete
+                </button>
+              </div>
             </motion.div>
           </div>
         )}

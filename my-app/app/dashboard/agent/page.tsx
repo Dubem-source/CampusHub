@@ -46,6 +46,7 @@ import {
   Monitor,
   PlusCircle,
   Save,
+  CheckCircle,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import Image from "next/image";
@@ -80,7 +81,7 @@ import LodgeCard from "@/components/LodgeCard";
 
 // --- Types ---
 
-type Availability = "available" | "pending" | "rented";
+type Availability = "available" | "rented";
 
 interface Listing {
   id: string;
@@ -127,95 +128,8 @@ const SETTINGS_TAB_INFO = {
   }
 } as const;
 
-const INITIAL_AGENT_DATA = {
-  id: 'agent1',
-  full_name: 'Johnson Okonkwo',
-  phone: '08012345678',
-  whatsapp: '08012345678',
-  agent_type: 'individual',
-  verified: false,
-  approved: false,
-  emailVerified: true,
-  phoneVerified: false,
-  ninUploaded: false,
-  suspended: false,
-  ninImage: null as string | null,
-  ninImageName: null as string | null,
-  email: 'johnson@campushub.com',
-  responseTime: 'Replies within 5 mins',
-  photo: 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y',
-  joinedDate: 'Oct 2025',
-  stats: {
-    total_listings: 4,
-    total_views: 340,
-    inquiries: 0,
-    avg_rating: 4.5
-  },
-  listings: [
-    {
-      id: 'l1',
-      room_type: 'Self-contain',
-      price: 250000,
-      entryPrice: 100000,
-      viewsCount: 142,
-      area: 'Eziobodo',
-      landmark: 'Near FUTO gate',
-      building_name: 'Eziobodo Student Haven',
-      amenities: ['Solar power', 'Borehole water', 'WiFi'],
-      photos: ['https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=400&q=80'],
-      availability: 'available' as Availability,
-      description: 'Spacious room with good lighting and ventilation.',
-      created_at: '2025-06-01'
-    },
-    {
-      id: 'l2',
-      room_type: 'Mini-flat',
-      price: 450000,
-      entryPrice: 180000,
-      viewsCount: 89,
-      area: 'Ihiagwa',
-      landmark: 'Behind Student Gate',
-      building_name: 'Ihiagwa Gardens',
-      amenities: ['Security', 'POP Ceiling', 'Tiled floor'],
-      photos: ['https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=400&q=80'],
-      availability: 'pending' as Availability,
-      description: 'Modern mini-flat with separate kitchen and bathroom.',
-      created_at: '2025-06-05'
-    },
-    {
-      id: 'l3',
-      room_type: 'Self-contain',
-      price: 220000,
-      entryPrice: 90000,
-      viewsCount: 65,
-      area: 'Umuchima',
-      landmark: 'Near the market',
-      building_name: 'Umuchima Heights',
-      amenities: ['Borehole water', 'Fenced'],
-      photos: ['https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=400&q=80'],
-      availability: 'rented' as Availability,
-      description: 'Affordable self-contain for students.',
-      created_at: '2025-05-20'
-    },
-    {
-      id: 'l4',
-      room_type: 'Single room',
-      price: 120000,
-      entryPrice: 50000,
-      viewsCount: 24,
-      area: 'Eziobodo',
-      landmark: 'Close to the tarred road',
-      building_name: 'Legacy Lodge',
-      amenities: ['Water', 'Security'],
-      photos: ['https://images.unsplash.com/photo-1540518614846-7eded433c457?auto=format&fit=crop&w=400&q=80'],
-      availability: 'available' as Availability,
-      description: 'Quiet environment, perfect for studying.',
-      created_at: '2025-06-08'
-    }
-  ] as Listing[]
-};
-
 const ROOM_TYPES = ["Self-contain", "Mini-flat", "Single room", "One-bedroom"];
+
 const AMENITY_OPTIONS = ["Solar power", "Borehole water", "WiFi", "Security", "POP Ceiling", "Tiled floor", "Fenced", "Kitchen cabinet"];
 const AREAS = ["Ihiagwa", "Eziobodo", "FUTO", "Umuchima"];
 
@@ -224,8 +138,35 @@ export default function AgentDashboard() {
   const { user, profile, loading: authLoading, logout: handleFirebaseLogout } = useAuth();
   const { toggleSidebar } = useSidebar();
   const [activeTab, setActiveTab] = useState<"profile" | "overview" | "listings" | "notifications" | "settings" | "edit-listing" | "add-listing" | "view-listing">("profile");
-  const [agentData, setAgentData] = useState(INITIAL_AGENT_DATA);
+  const [agentData, setAgentData] = useState({
+    id: '',
+    full_name: '',
+    phone: '',
+    whatsapp: '',
+    agent_type: 'individual',
+    verified: false,
+    approved: false,
+    emailVerified: false,
+    phoneVerified: false,
+    ninUploaded: false,
+    suspended: false,
+    ninImage: null as string | null,
+    ninImageName: null as string | null,
+    email: '',
+    responseTime: 'Replies within 5 mins',
+    photo: 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y',
+    joinedDate: '',
+    stats: {
+      total_listings: 0,
+      total_views: 0,
+      inquiries: 0,
+      avg_rating: 0,
+    },
+    listings: [] as Listing[]
+  });
   const [editingListing, setEditingListing] = useState<Listing | null>(null);
+  const [listingSearch, setListingSearch] = useState("");
+  const [listingFilter, setListingFilter] = useState<"all" | "available" | "rented">("all");
 
   // Sync profile document updates from Firestore in real-time
   useEffect(() => {
@@ -244,6 +185,31 @@ export default function AgentDashboard() {
       }));
     }
   }, [profile]);
+
+  // Verified Celebration Modal
+  const [showVerifiedCelebrationModal, setShowVerifiedCelebrationModal] = useState(false);
+
+  useEffect(() => {
+    if (user && (agentData.approved || agentData.verified)) {
+      const storageKey = `agent_verified_celebrated_${user.uid}`;
+      const hasSeen = localStorage.getItem(storageKey);
+      if (!hasSeen) {
+        setShowVerifiedCelebrationModal(true);
+      }
+    }
+  }, [user, agentData.approved, agentData.verified]);
+
+  const handleDismissCelebration = () => {
+    if (user) {
+      localStorage.setItem(`agent_verified_celebrated_${user.uid}`, "true");
+    }
+    setShowVerifiedCelebrationModal(false);
+  };
+
+  const handleStartListingFromCelebration = () => {
+    handleDismissCelebration();
+    setActiveTab("add-listing");
+  };
 
   // ── Route Guard: must be logged in AND be an agent ──
   useEffect(() => {
@@ -267,60 +233,65 @@ export default function AgentDashboard() {
 
   const [listingsLoading, setListingsLoading] = useState(true);
 
-  // Sync rooms listings and stats from Firestore Database
+  // ── Real-time listings sync via onSnapshot — strictly scoped to this agent's uid ──
   useEffect(() => {
-    if (!user) return;
-    const fetchAgentListings = async () => {
-      setListingsLoading(true);
-      try {
-        const roomsSnap = await getDocs(
-          query(collection(db, "rooms"), where("agentId", "==", user.uid))
-        );
-        const fetchedListings: Listing[] = [];
-        let totalViews = 0;
+    if (!user || !profile || profile.role !== 'agent') return;
 
-        roomsSnap.forEach((docSnap) => {
-          const data = docSnap.data();
-          const listingItem: Listing = {
-            id: docSnap.id,
-            room_type: data.roomType,
-            price: Number(data.price),
-            entryPrice: Number(data.entryPrice),
-            area: data.area,
-            landmark: data.landmark,
-            building_name: data.building_name,
-            amenities: data.amenities || [],
-            photos: data.photos || [],
-            availability: data.availability as Availability,
-            description: data.description || "",
-            created_at: data.created_at || new Date().toISOString().split("T")[0],
-            viewsCount: Number(data.viewsCount || 0)
-          };
-          fetchedListings.push(listingItem);
-          totalViews += listingItem.viewsCount || 0;
-        });
+    setListingsLoading(true);
+    const q = query(
+      collection(db, "rooms"),
+      where("agentId", "==", user.uid)
+    );
 
-        fetchedListings.sort((a, b) => b.created_at.localeCompare(a.created_at));
+    const unsub = onSnapshot(q, (snap) => {
+      const fetchedListings: Listing[] = [];
+      let totalViews = 0;
 
-        setAgentData(prev => ({
-          ...prev,
-          listings: fetchedListings,
-          stats: {
-            total_listings: fetchedListings.length,
-            total_views: totalViews,
-            inquiries: prev.stats?.inquiries || 0,
-            avg_rating: prev.stats?.avg_rating || 4.5
-          }
-        }));
-      } catch (err) {
-        console.error("Error fetching agent listings:", err);
-      } finally {
-        setListingsLoading(false);
-      }
-    };
+      snap.forEach((docSnap) => {
+        const data = docSnap.data();
+        // Normalize availability: drop 'pending' → 'available'
+        const rawAvail = data.availability as string;
+        const availability: Availability =
+          rawAvail === 'rented' ? 'rented' : 'available';
 
-    fetchAgentListings();
-  }, [user]);
+        const listingItem: Listing = {
+          id: docSnap.id,
+          room_type: data.roomType || data.room_type || '',
+          price: Number(data.price),
+          entryPrice: Number(data.entryPrice || 0),
+          area: data.area || '',
+          landmark: data.landmark || '',
+          building_name: data.building_name || data.buildingName || '',
+          amenities: data.amenities || [],
+          photos: data.photos || [],
+          availability,
+          description: data.description || '',
+          created_at: data.created_at || data.createdAt || new Date().toISOString().split('T')[0],
+          viewsCount: Number(data.viewsCount || 0),
+        };
+        fetchedListings.push(listingItem);
+        totalViews += listingItem.viewsCount || 0;
+      });
+
+      fetchedListings.sort((a, b) => b.created_at.localeCompare(a.created_at));
+
+      setAgentData(prev => ({
+        ...prev,
+        listings: fetchedListings,
+        stats: {
+          ...prev.stats,
+          total_listings: fetchedListings.length,
+          total_views: totalViews,
+        }
+      }));
+      setListingsLoading(false);
+    }, (err) => {
+      console.error('Listings real-time sync error:', err);
+      setListingsLoading(false);
+    });
+
+    return () => unsub();
+  }, [user, profile]);
 
   // OTP Verification States
   const [showOtpModal, setShowOtpModal] = useState(false);
@@ -428,16 +399,31 @@ export default function AgentDashboard() {
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [notifications, setNotifications] = useState<{ id: string; text: string; date: string; read: boolean }[]>([]);
 
-  // Profile Form state
+  // Profile Form state — initialised empty, synced from Firestore profile below
   const [profileForm, setProfileForm] = useState({
-    full_name: INITIAL_AGENT_DATA.full_name,
-    phone: INITIAL_AGENT_DATA.phone,
-    whatsapp: INITIAL_AGENT_DATA.phone,
-    email: INITIAL_AGENT_DATA.email,
-    agent_type: INITIAL_AGENT_DATA.agent_type,
-    responseTime: INITIAL_AGENT_DATA.responseTime,
-    photo: INITIAL_AGENT_DATA.photo
+    full_name: '',
+    phone: '',
+    whatsapp: '',
+    email: '',
+    agent_type: 'individual',
+    responseTime: 'Replies within 5 mins',
+    photo: 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'
   });
+
+  // Keep profileForm in sync whenever agentData updates from Firestore
+  useEffect(() => {
+    if (agentData.id) {
+      setProfileForm({
+        full_name: agentData.full_name,
+        phone: agentData.phone,
+        whatsapp: agentData.whatsapp || agentData.phone,
+        email: agentData.email,
+        agent_type: agentData.agent_type,
+        responseTime: agentData.responseTime,
+        photo: agentData.photo,
+      });
+    }
+  }, [agentData.id, agentData.full_name, agentData.phone, agentData.email]);
 
   // Sync theme and local storage data on mount and focus changes
   useEffect(() => {
@@ -452,45 +438,6 @@ export default function AgentDashboard() {
       const isDarkTheme = document.documentElement.classList.contains("dark");
       setIsDark(isDarkTheme);
     }
-
-    const handleSync = () => {
-      const saved = localStorage.getItem("agent_data");
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          setAgentData(parsed);
-          setProfileForm({
-            full_name: parsed.full_name || INITIAL_AGENT_DATA.full_name,
-            phone: parsed.phone || INITIAL_AGENT_DATA.phone,
-            whatsapp: parsed.whatsapp || parsed.phone || INITIAL_AGENT_DATA.phone,
-            email: parsed.email || INITIAL_AGENT_DATA.email,
-            agent_type: parsed.agent_type || INITIAL_AGENT_DATA.agent_type,
-            responseTime: parsed.responseTime || INITIAL_AGENT_DATA.responseTime,
-            photo: parsed.photo || INITIAL_AGENT_DATA.photo,
-          });
-          if (parsed.whatsapp && parsed.whatsapp !== parsed.phone) {
-            setWhatsAppSameAsPhone(false);
-          } else {
-            setWhatsAppSameAsPhone(true);
-          }
-        } catch (e) {
-          console.error(e);
-        }
-      } else {
-        localStorage.setItem("agent_data", JSON.stringify(INITIAL_AGENT_DATA));
-      }
-    };
-
-    handleSync();
-
-    window.addEventListener("focus", handleSync);
-    window.addEventListener("storage", handleSync);
-    window.addEventListener("agent-data-updated", handleSync);
-    return () => {
-      window.removeEventListener("focus", handleSync);
-      window.removeEventListener("storage", handleSync);
-      window.removeEventListener("agent-data-updated", handleSync);
-    };
   }, []);
 
   // Real-time Firestore user document synchronization
@@ -705,6 +652,9 @@ export default function AgentDashboard() {
           phoneVerified: true,
           phone: agentData.phone
         });
+        await updateDoc(doc(db, "agents", user.uid), {
+          phoneVerified: true,
+        }).catch(() => {});
       }
 
       setAgentData(prev => {
@@ -753,6 +703,11 @@ export default function AgentDashboard() {
           ninImage: finalImageUrl,
           ninImageName: selectedFile?.name || "NIN_document.jpg"
         });
+        await updateDoc(doc(db, "agents", user.uid), {
+          ninUploaded: true,
+          ninImage: finalImageUrl,
+          ninImageName: selectedFile?.name || "NIN_document.jpg"
+        }).catch(() => {});
       }
 
       setAgentData(prev => {
@@ -1165,17 +1120,14 @@ export default function AgentDashboard() {
   const AvailabilityBadge = ({ status, onClick }: { status: Availability, onClick?: () => void }) => {
     const config = {
       available: { label: "Available", color: "bg-emerald-500" },
-      pending: { label: "Pending", color: "bg-amber-500" },
       rented: { label: "Rented", color: "bg-rose-500" }
-    }[status];
+    }[status] ?? { label: "Available", color: "bg-emerald-500" };
 
     return (
       <Badge
         className={cn(
           "cursor-pointer hover:opacity-90 transition-opacity gap-1.5 px-3 py-1 text-white font-medium rounded-full",
-          status === "available" ? "bg-emerald-500" :
-            status === "pending" ? "bg-amber-500" :
-              "bg-rose-500"
+          status === "available" ? "bg-emerald-500" : "bg-rose-500"
         )}
         onClick={onClick}
       >
@@ -1246,7 +1198,7 @@ export default function AgentDashboard() {
         <div className="flex lg:hidden items-center justify-between bg-white dark:bg-[#0f1d2e] text-navy dark:text-white px-6 py-4 border-b border-black/5 dark:border-white/10 shadow-sm z-40">
           <div className="flex items-center gap-1">
             <Image
-              src="/image/Campus-Hub.png"
+              src="/image/Campus-Hub2.png"
               alt="Campus-Hub Logo"
               width={32}
               height={32}
@@ -1719,10 +1671,10 @@ export default function AgentDashboard() {
                                       name={listing.building_name}
                                       area={`${listing.area} · ${listing.landmark}`}
                                       price={formatNaira(listing.price)}
-                                      badge={listing.availability === "available" ? "Available now" : listing.availability === "pending" ? "Pending" : "Rented"}
+                                      badge={listing.availability === "available" ? "Available now" : "Rented"}
                                       photo={listing.photos[0]}
                                       href="#"
-                                      availability={listing.availability === "available" ? "Available now" : listing.availability === "pending" ? "Pending" : "Rented"}
+                                      availability={listing.availability === "available" ? "Available now" : "Rented"}
                                       roomType={listing.room_type}
                                       hideHeart={true}
                                     />
@@ -1827,12 +1779,30 @@ export default function AgentDashboard() {
                       !isApproved ? (
                         <PendingTabAlert />
                       ) : (
-                        <div className="space-y-8 text-left">
-                          <div className="flex items-center justify-between px-6 sm:px-0">
-                            <div>
-                              <p className="text-muted-foreground text-sm">Edit, update status, or remove your property listings.</p>
+                        <div className="space-y-6 text-left">
+                          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 px-6 sm:px-0">
+                            <div className="flex flex-col sm:flex-row items-center gap-3 flex-1 max-w-lg">
+                              <div className="relative w-full">
+                                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                  placeholder="Search listings by name, area, or type..."
+                                  value={listingSearch}
+                                  onChange={(e) => setListingSearch(e.target.value)}
+                                  className="pl-10 h-11 rounded-xl bg-white dark:bg-white/5 border border-black/5 dark:border-white/10 text-sm font-semibold"
+                                />
+                              </div>
+                              <Select value={listingFilter} onValueChange={(val) => setListingFilter(val as any)}>
+                                <SelectTrigger className="h-11 px-4 rounded-xl border border-black/5 dark:border-white/10 bg-white dark:bg-white/5 text-xs font-bold w-full sm:w-[140px] shrink-0">
+                                  <SelectValue placeholder="All Status" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="all">All Status</SelectItem>
+                                  <SelectItem value="available">Available</SelectItem>
+                                  <SelectItem value="rented">Rented</SelectItem>
+                                </SelectContent>
+                              </Select>
                             </div>
-                            <Button onClick={() => setActiveTab("add-listing")} className="h-12 px-6 rounded-xl bg-gold hover:bg-gold/90 text-navy font-extrabold shadow-md flex items-center justify-center gap-2 border-0 cursor-pointer">
+                            <Button onClick={() => setActiveTab("add-listing")} className="h-11 px-6 rounded-xl bg-gold hover:bg-gold/90 text-navy font-extrabold shadow-md flex items-center justify-center gap-2 border-0 cursor-pointer shrink-0">
                               <Plus className="h-4.5 w-4.5 stroke-[3]" /> Add New Room
                             </Button>
                           </div>
@@ -1908,7 +1878,17 @@ export default function AgentDashboard() {
                                       </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-50 dark:divide-white/5">
-                                      {(agentData.listings || []).map((listing) => (
+                                      {(agentData.listings || [])
+                                        .filter((listing) => {
+                                          const matchesSearch =
+                                            listing.building_name.toLowerCase().includes(listingSearch.toLowerCase()) ||
+                                            listing.area.toLowerCase().includes(listingSearch.toLowerCase()) ||
+                                            listing.room_type.toLowerCase().includes(listingSearch.toLowerCase()) ||
+                                            listing.landmark.toLowerCase().includes(listingSearch.toLowerCase());
+                                          const matchesFilter = listingFilter === "all" || listing.availability === listingFilter;
+                                          return matchesSearch && matchesFilter;
+                                        })
+                                        .map((listing) => (
                                         <tr
                                           key={listing.id}
                                           className="hover:bg-gray-50/80 dark:hover:bg-white/5 transition group"
@@ -1937,7 +1917,6 @@ export default function AgentDashboard() {
                                               </SelectTrigger>
                                               <SelectContent>
                                                 <SelectItem value="available">Available</SelectItem>
-                                                <SelectItem value="pending">Pending</SelectItem>
                                                 <SelectItem value="rented">Rented</SelectItem>
                                               </SelectContent>
                                             </Select>
@@ -1970,7 +1949,17 @@ export default function AgentDashboard() {
 
                                 {/* Mobile Card View */}
                                 <div className="md:hidden space-y-4 px-0">
-                                  {(agentData.listings || []).map((listing) => (
+                                  {(agentData.listings || [])
+                                    .filter((listing) => {
+                                      const matchesSearch =
+                                        listing.building_name.toLowerCase().includes(listingSearch.toLowerCase()) ||
+                                        listing.area.toLowerCase().includes(listingSearch.toLowerCase()) ||
+                                        listing.room_type.toLowerCase().includes(listingSearch.toLowerCase()) ||
+                                        listing.landmark.toLowerCase().includes(listingSearch.toLowerCase());
+                                      const matchesFilter = listingFilter === "all" || listing.availability === listingFilter;
+                                      return matchesSearch && matchesFilter;
+                                    })
+                                    .map((listing) => (
                                     <Card key={listing.id} className="border-none shadow-sm overflow-hidden bg-white dark:bg-[#0f1d2e] rounded-none sm:rounded-2xl border-x-0 sm:border">
                                       <CardContent className="p-3">
                                         <div className="flex items-center gap-3">
@@ -1999,7 +1988,6 @@ export default function AgentDashboard() {
                                                 </SelectTrigger>
                                                 <SelectContent>
                                                   <SelectItem value="available">Available</SelectItem>
-                                                  <SelectItem value="pending">Pending</SelectItem>
                                                   <SelectItem value="rented">Rented</SelectItem>
                                                 </SelectContent>
                                               </Select>
@@ -2558,8 +2546,8 @@ export default function AgentDashboard() {
                                       <span className="rounded-full bg-[#f7efe0] dark:bg-white/5 px-4 py-2 text-sm font-semibold text-navy dark:text-white">
                                         {selectedRoomForDetail.room_type}
                                       </span>
-                                      <span className={`rounded-full px-4 py-2 text-sm font-semibold ${selectedRoomForDetail.availability === "available" ? "bg-emerald-100 text-emerald-700" : selectedRoomForDetail.availability === "pending" ? "bg-amber-100 text-amber-700" : "bg-rose-100 text-rose-700"}`}>
-                                        {selectedRoomForDetail.availability.charAt(0).toUpperCase() + selectedRoomForDetail.availability.slice(1)}
+                                      <span className={`rounded-full px-4 py-2 text-sm font-semibold ${selectedRoomForDetail.availability === "available" ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}`}>
+                                        {selectedRoomForDetail.availability === "available" ? "Available" : "Rented"}
                                       </span>
                                       <span className="rounded-full bg-gray-100 dark:bg-white/10 px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
                                         First Payment {formatNaira(selectedRoomForDetail.price)}
@@ -3444,6 +3432,63 @@ export default function AgentDashboard() {
           </div>
         </div>
       )}
+
+      {/* ── Verified Agent Celebration Modal ────────────────────────────── */}
+      <AnimatePresence>
+        {showVerifiedCelebrationModal && (
+          <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/75 backdrop-blur-md p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.85, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.85, y: 20 }}
+              className="bg-white dark:bg-[#0f1d2e] rounded-[2.5rem] border border-gold/30 p-8 w-full max-w-md text-center relative overflow-hidden shadow-2xl space-y-5"
+            >
+              <div className="w-20 h-20 mx-auto rounded-3xl bg-gradient-to-br from-gold/20 via-emerald-500/10 to-gold/20 border border-gold/30 flex items-center justify-center shadow-lg relative animate-bounce">
+                <ShieldCheck className="h-10 w-10 text-gold" />
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="text-2xl font-black text-navy dark:text-white tracking-tight">
+                  Congratulations!
+                </h3>
+                <p className="text-sm font-bold text-gold">
+                  Your Agent Account is Officially Verified
+                </p>
+                <p className="text-xs text-muted-foreground leading-relaxed px-2">
+                  Your identity and credentials have been vetted by CampusHub Admins. You now have full verified access to list student lodges, manage availability, and connect with tenants!
+                </p>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-gold/10 border border-gold/20 text-left text-xs font-semibold text-navy dark:text-gray-200 space-y-1.5">
+                <div className="flex items-center gap-2 text-gold font-bold">
+                  <CheckCircle className="h-4 w-4" />
+                  <span>Verified Agent Badge Active</span>
+                </div>
+                <p className="text-[11px] text-muted-foreground leading-normal">
+                  Students can now see your verified badge on all your lodge listings and agent profile.
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-2.5 pt-2">
+                <Button
+                  onClick={handleStartListingFromCelebration}
+                  className="w-full h-12 rounded-2xl bg-gold hover:bg-gold/90 text-navy font-extrabold text-sm shadow-md border-0 cursor-pointer flex items-center justify-center gap-2"
+                >
+                  <Plus className="h-4 w-4" /> Start Listing Lodges Now
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={handleDismissCelebration}
+                  className="w-full text-xs font-bold text-muted-foreground hover:text-navy dark:hover:text-white"
+                >
+                  Dismiss
+                </Button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </>
+
   );
 }

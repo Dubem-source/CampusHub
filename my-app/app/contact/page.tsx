@@ -131,7 +131,7 @@ export default function ContactPage() {
         <div className="relative flex flex-col items-center space-y-4">
           <div className="relative h-20 w-20 rounded-full bg-gold/10 p-2 flex items-center justify-center shadow-lg border border-gold/20 animate-pulse">
             <Image
-              src="/image/Campus-Hub.png"
+              src="/image/Campus-Hub2.png"
               alt="CampusHub Logo"
               width={64}
               height={64}

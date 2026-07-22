@@ -145,6 +145,23 @@ export default function RoomDetailPage() {
 
           if (lodge) {
             setRoomContext({ room, lodge, agent });
+
+            // Save to Recently Viewed in localStorage
+            if (typeof window !== "undefined") {
+              try {
+                const LOCAL_KEY = "campus_recent_rooms";
+                const existing = JSON.parse(localStorage.getItem(LOCAL_KEY) || "[]") as Array<{
+                  roomId: string;
+                  lodgeSlug: string;
+                  viewedAt: number;
+                }>;
+                const filtered = existing.filter((item) => item.roomId !== room.id);
+                const updated = [{ roomId: room.id, lodgeSlug: lodge.slug, viewedAt: Date.now() }, ...filtered].slice(0, 20);
+                localStorage.setItem(LOCAL_KEY, JSON.stringify(updated));
+              } catch (e) {
+                console.error("Error saving recently viewed room:", e);
+              }
+            }
             
             // Fetch other rooms
             try {

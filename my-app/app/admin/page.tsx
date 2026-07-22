@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { db } from "@/lib/firebase";
-import { doc, updateDoc, collection, query, where, onSnapshot, getDocs } from "firebase/firestore";
+import { doc, updateDoc, deleteDoc, collection, query, where, onSnapshot, getDocs } from "firebase/firestore";
 import {
   Building2,
   Users,
@@ -546,7 +546,7 @@ const AgentsManagementTab = ({ agents, setAgents }: { agents: Agent[], setAgents
                     <TableCell>{agent.joinedDate}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
-                        <Button variant="ghost" size="sm" className="text-navy dark:text-gold font-semibold">View Profile</Button>
+                        <Button variant="ghost" size="sm" className="text-navy dark:text-gold font-semibold cursor-pointer" onClick={() => window.open(`/agents/${agent.id}`, '_blank')}>View Profile</Button>
                         <Button variant="ghost" size="sm" className="text-rose-500 font-semibold" onClick={() => {
                           const nextStatus = agent.verificationStatus === 'Suspended' ? 'Verified' : 'Suspended';
                           setAgents(prev => prev.map(a => a.id === agent.id ? { ...a, verificationStatus: nextStatus } : a));
@@ -621,7 +621,7 @@ const AgentsManagementTab = ({ agents, setAgents }: { agents: Agent[], setAgents
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm" className="h-8 text-xs font-semibold px-3 rounded-lg text-navy dark:text-gold border-navy/10">View Profile</Button>
+                    <Button variant="outline" size="sm" className="h-8 text-xs font-semibold px-3 rounded-lg text-navy dark:text-gold border-navy/10 cursor-pointer" onClick={() => window.open(`/agents/${agent.id}`, '_blank')}>View Profile</Button>
                     <Button
                       variant="outline"
                       size="sm"
@@ -711,8 +711,8 @@ const LodgesManagementTab = ({
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
-                      <Button variant="ghost" size="sm" className="text-navy dark:text-gold font-semibold">View</Button>
-                      <Button variant="ghost" size="sm" className="text-muted-foreground font-semibold" onClick={() => handleToggleLodgeStatus(lodge.id)}>
+                      <Button variant="ghost" size="sm" className="text-navy dark:text-gold font-semibold cursor-pointer" onClick={() => window.open(`/lodges/${lodge.id}`, '_blank')}>View</Button>
+                      <Button variant="ghost" size="sm" className="text-muted-foreground font-semibold cursor-pointer" onClick={() => handleToggleLodgeStatus(lodge.id)}>
                         {lodge.status === 'Active' ? "Hide" : "Unhide"}
                       </Button>
                       <Button variant="ghost" size="sm" className="text-rose-500 font-semibold" onClick={() => handleDeleteLodge(lodge.id)}>Delete</Button>
@@ -752,8 +752,8 @@ const LodgesManagementTab = ({
               <div className="flex items-center justify-between border-t border-black/5 dark:border-white/5 pt-3">
                 <span className="text-[10px] text-navy/40 dark:text-white/40 font-semibold">{lodge.createdDate}</span>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" className="h-8 text-xs font-semibold px-3 rounded-lg text-navy dark:text-gold border-navy/10">View</Button>
-                  <Button variant="outline" size="sm" className="h-8 text-xs font-semibold px-3 rounded-lg text-muted-foreground border-navy/10" onClick={() => handleToggleLodgeStatus(lodge.id)}>
+                  <Button variant="outline" size="sm" className="h-8 text-xs font-semibold px-3 rounded-lg text-navy dark:text-gold border-navy/10 cursor-pointer" onClick={() => window.open(`/lodges/${lodge.id}`, '_blank')}>View</Button>
+                  <Button variant="outline" size="sm" className="h-8 text-xs font-semibold px-3 rounded-lg text-muted-foreground border-navy/10 cursor-pointer" onClick={() => handleToggleLodgeStatus(lodge.id)}>
                     {lodge.status === 'Active' ? "Hide" : "Unhide"}
                   </Button>
                   <Button variant="outline" size="sm" className="h-8 text-xs font-semibold px-3 rounded-lg text-rose-500 border-rose-500/10" onClick={() => handleDeleteLodge(lodge.id)}>Delete</Button>
@@ -1543,6 +1543,28 @@ export default function AdminDashboard() {
 
   const [isDark, setIsDark] = useState(false);
 
+  // Unified Admin Delete Confirmation Modal state
+  const [adminDeleteModal, setAdminDeleteModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    description: string;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: "",
+    description: "",
+    onConfirm: () => {},
+  });
+
+  const requestDeleteConfirm = (title: string, description: string, onConfirm: () => void) => {
+    setAdminDeleteModal({
+      isOpen: true,
+      title,
+      description,
+      onConfirm,
+    });
+  };
+
   // Marketplace States
   const [marketplaceItems, setMarketplaceItems] = useState<MarketplaceItem[]>([]);
   
@@ -1592,14 +1614,18 @@ export default function AdminDashboard() {
   }, []);
 
   const handleAdminDeleteMarketplaceItem = (id: string, hardRemove: boolean = false) => {
-    if (confirm(hardRemove ? "Are you sure you want to permanently remove this item?" : "Are you sure you want to delete this listing?")) {
-      const updated = hardRemove 
-        ? marketplaceItems.filter(item => item.id !== id)
-        : marketplaceItems.map(item => item.id === id ? { ...item, status: 'deleted' as const } : item);
-      setMarketplaceItems(updated);
-      saveMarketplaceItems(updated);
-      toast.success(hardRemove ? "Item removed permanently" : "Item soft deleted");
-    }
+    requestDeleteConfirm(
+      hardRemove ? "Permanently Remove Item" : "Delete Marketplace Listing",
+      hardRemove ? "Are you sure you want to permanently remove this item? This action cannot be undone." : "Are you sure you want to delete this listing from the marketplace?",
+      () => {
+        const updated = hardRemove 
+          ? marketplaceItems.filter(item => item.id !== id)
+          : marketplaceItems.map(item => item.id === id ? { ...item, status: 'deleted' as const } : item);
+        setMarketplaceItems(updated);
+        saveMarketplaceItems(updated);
+        toast.success(hardRemove ? "Item removed permanently" : "Item soft deleted");
+      }
+    );
   };
 
   const handleAdminRestoreMarketplaceItem = (id: string) => {
@@ -1689,12 +1715,16 @@ export default function AdminDashboard() {
   };
 
   const handleDeleteProvider = (id: string) => {
-    if (confirm("Are you sure you want to delete this service provider?")) {
-      const updated = serviceProviders.filter(p => p.id !== id);
-      setServiceProviders(updated);
-      saveServiceProviders(updated);
-      toast.success("Service provider deleted successfully");
-    }
+    requestDeleteConfirm(
+      "Delete Service Provider",
+      "Are you sure you want to delete this service provider from CampusHub?",
+      () => {
+        const updated = serviceProviders.filter(p => p.id !== id);
+        setServiceProviders(updated);
+        saveServiceProviders(updated);
+        toast.success("Service provider deleted successfully");
+      }
+    );
   };
 
   // Notifications and simulated email states
@@ -1799,8 +1829,14 @@ export default function AdminDashboard() {
   };
 
   const handleDeleteOfficialLodge = (id: string) => {
-    setLodges(prev => prev.filter(l => l.id !== id));
-    toast.success("Official listing deleted successfully");
+    requestDeleteConfirm(
+      "Delete Official Listing",
+      "Are you sure you want to delete this official CampusHub listing?",
+      () => {
+        setLodges(prev => prev.filter(l => l.id !== id));
+        toast.success("Official listing deleted successfully");
+      }
+    );
   };
 
   const handleCreateOfficialSubmit = (e: React.FormEvent) => {
@@ -2081,14 +2117,49 @@ export default function AdminDashboard() {
     setIsNotificationOpen(false);
   };
 
-  const handleToggleLodgeStatus = (id: string) => {
-    setLodges(prev => prev.map(lodge => lodge.id === id ? { ...lodge, status: lodge.status === 'Active' ? 'Hidden' : 'Active' } : lodge));
-    toast.success("Lodge status updated");
+  const handleToggleLodgeStatus = async (id: string) => {
+    const target = lodges.find(l => l.id === id);
+    if (!target) return;
+    const newStatus = target.status === 'Active' ? 'Hidden' : 'Active';
+    const isHidden = newStatus === 'Hidden';
+
+    setLodges(prev => prev.map(lodge => lodge.id === id ? { ...lodge, status: newStatus } : lodge));
+
+    if (!id.startsWith("official-")) {
+      try {
+        await updateDoc(doc(db, "rooms", id), {
+          hidden: isHidden,
+          availability: isHidden ? "rented" : "available"
+        });
+        toast.success(`Listing status updated to ${newStatus}`);
+      } catch (err) {
+        console.error("Error updating room status in Firestore:", err);
+        toast.error("Failed to update status in database.");
+      }
+    } else {
+      toast.success(`Listing status updated to ${newStatus}`);
+    }
   };
 
   const handleDeleteLodge = (id: string) => {
-    setLodges(prev => prev.filter(lodge => lodge.id !== id));
-    toast.success("Lodge deleted");
+    requestDeleteConfirm(
+      "Delete Lodge Listing",
+      "Are you sure you want to delete this lodge listing? It will be permanently removed.",
+      async () => {
+        setLodges(prev => prev.filter(lodge => lodge.id !== id));
+        if (!id.startsWith("official-")) {
+          try {
+            await deleteDoc(doc(db, "rooms", id));
+            toast.success("Lodge listing deleted from database");
+          } catch (err) {
+            console.error("Error deleting room from Firestore:", err);
+            toast.error("Failed to delete room listing.");
+          }
+        } else {
+          toast.success("Lodge listing deleted");
+        }
+      }
+    );
   };
 
   const handleUpdateReportStatus = (id: string, status: Report['status']) => {
@@ -2148,7 +2219,7 @@ export default function AdminDashboard() {
         <div className="flex md:hidden items-center justify-between bg-[#0f1e2d] text-white px-6 py-4 border-b border-white/10 shadow-sm z-40 shrink-0">
           <div className="flex items-center gap-2">
             <Image
-              src="/image/Campus-Hub.png"
+              src="/image/Campus-Hub2.png"
               alt="Campus-Hub Logo"
               width={32}
               height={32}
@@ -3794,6 +3865,43 @@ export default function AdminDashboard() {
           </>
         )}
       </AnimatePresence>
+
+      {/* ── Admin Delete Confirmation Modal ────────────────────────────── */}
+      <Dialog open={adminDeleteModal.isOpen} onOpenChange={(open) => !open && setAdminDeleteModal(prev => ({ ...prev, isOpen: false }))}>
+        <DialogContent className="max-w-md bg-white dark:bg-[#0f1d2e] rounded-3xl border border-black/5 dark:border-white/10 p-6 shadow-2xl">
+          <DialogHeader className="space-y-2 text-left">
+            <div className="w-12 h-12 rounded-2xl bg-rose-500/10 text-rose-500 flex items-center justify-center mb-2">
+              <Trash2 size={24} />
+            </div>
+            <DialogTitle className="text-lg font-bold text-navy dark:text-white">
+              {adminDeleteModal.title || "Confirm Deletion"}
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground leading-relaxed">
+              {adminDeleteModal.description || "Are you sure you want to delete this item? This action cannot be undone."}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex gap-3 pt-4">
+            <Button
+              variant="outline"
+              onClick={() => setAdminDeleteModal(prev => ({ ...prev, isOpen: false }))}
+              className="flex-1 rounded-xl border-gray-200 dark:border-white/10 text-xs font-bold"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                adminDeleteModal.onConfirm();
+                setAdminDeleteModal(prev => ({ ...prev, isOpen: false }));
+              }}
+              className="flex-1 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold"
+            >
+              Yes, Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
+
   );
 }

@@ -1,30 +1,54 @@
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
+import { z } from "zod";
 
 const resendApiKey = process.env.RESEND_API_KEY;
 const contactFrom = process.env.CONTACT_FROM_EMAIL ?? "CampusHub <onboarding@resend.dev>";
 const contactTo = process.env.CONTACT_TO_EMAIL ?? "hello@campushub.com";
 
+// In-memory rate limiting store (max 5 requests per IP per minute)
+const rateLimitMap = new Map<string, { count: number; lastReset: number }>();
+
+const contactSchema = z.object({
+  name: z.string().min(2, "Name is too short"),
+  email: z.string().email("Invalid email address"),
+  subject: z.string().min(3, "Subject is too short"),
+  message: z.string().min(10, "Message must be at least 10 characters"),
+});
+
 export async function POST(request: Request) {
   try {
-    const body = (await request.json()) as {
-      name?: string;
-      email?: string;
-      subject?: string;
-      message?: string;
-    };
+    // Basic IP rate limiting
+    const ip = request.headers.get("x-forwarded-for") || "global-client";
+    const now = Date.now();
+    const rateData = rateLimitMap.get(ip) || { count: 0, lastReset: now };
 
-    const name = body.name?.trim();
-    const email = body.email?.trim();
-    const subject = body.subject?.trim();
-    const message = body.message?.trim();
+    if (now - rateData.lastReset > 60000) {
+      rateData.count = 1;
+      rateData.lastReset = now;
+    } else {
+      rateData.count += 1;
+    }
+    rateLimitMap.set(ip, rateData);
 
-    if (!name || !email || !subject || !message) {
+    if (rateData.count > 5) {
       return NextResponse.json(
-        { ok: false, error: "All contact fields are required." },
-        { status: 400 },
+        { ok: false, error: "Too many requests. Please wait a minute before sending another message." },
+        { status: 429 }
       );
     }
+
+    const body = await request.json();
+    const parsed = contactSchema.safeParse(body);
+
+    if (!parsed.success) {
+      return NextResponse.json(
+        { ok: false, error: "Validation failed", details: parsed.error.format() },
+        { status: 400 }
+      );
+    }
+
+    const { name, email, subject, message } = parsed.data;
 
     if (!resendApiKey) {
       return NextResponse.json({

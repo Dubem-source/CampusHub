@@ -41,7 +41,13 @@ export function AgentSidebar({
   isApproved,
   onLogout,
 }: AgentSidebarProps) {
-  const { state } = useSidebar();
+  const { state, setOpenMobile } = useSidebar();
+
+  // Auto-close sidebar drawer on mobile when a tab is selected
+  const handleTabSelect = (tab: typeof activeTab) => {
+    setOpenMobile(false);
+    setActiveTab(tab);
+  };
 
   const navItems = [
     { id: "profile", label: "My Profile", icon: User },
@@ -88,7 +94,7 @@ export function AgentSidebar({
               <SidebarMenuItem key={item.id}>
                 <SidebarMenuButton
                   isActive={isActive}
-                  onClick={() => setActiveTab(item.id)}
+                  onClick={() => handleTabSelect(item.id)}
                   className={cn(
                     "w-full flex items-center gap-3 px-3 py-6 rounded-lg transition-all duration-200 group hover:bg-navy/5 hover:text-navy dark:hover:bg-white/5 dark:hover:text-white",
                     isActive
@@ -116,7 +122,7 @@ export function AgentSidebar({
         {state === "expanded" && isApproved && (
           <div className="px-3 mt-8">
             <button 
-              onClick={() => setActiveTab("add-listing")}
+              onClick={() => handleTabSelect("add-listing")}
               className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-gold px-4 py-3.5 text-sm font-bold text-navy shadow-lg shadow-gold/15 hover:scale-[1.02] transition active:scale-95 duration-200 cursor-pointer border-0"
             >
               <Plus className="h-4 w-4" />
@@ -132,7 +138,7 @@ export function AgentSidebar({
           <SidebarMenuItem>
             <SidebarMenuButton
               isActive={activeTab === "settings"}
-              onClick={() => setActiveTab("settings")}
+              onClick={() => handleTabSelect("settings")}
               className={cn(
                 "w-full flex items-center gap-3 px-3 py-6 rounded-lg transition-all duration-200 group hover:bg-navy/5 hover:text-navy dark:hover:bg-white/5 dark:hover:text-white",
                 activeTab === "settings"

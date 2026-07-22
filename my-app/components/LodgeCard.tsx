@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Heart, Star, BadgeCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -44,9 +45,19 @@ export default function LodgeCard({
   room,
   lodge,
 }: LodgeCardProps) {
+  const router = useRouter();
   const { user, profile } = useAuth();
   const [isSaved, setIsSaved] = useState(false);
   const [saveDocId, setSaveDocId] = useState<string | null>(null);
+
+  const handleCardClick = (e: React.MouseEvent) => {
+    if (!user && href && href !== "#") {
+      e.preventDefault();
+      toast.error("Please sign in to view room details.");
+      router.push(`/auth?mode=login&returnTo=${encodeURIComponent(href)}`);
+    }
+  };
+
 
   // Subscribe to the saved state of this room for the logged-in student
   React.useEffect(() => {
@@ -200,7 +211,7 @@ export default function LodgeCard({
       {href === "#" ? (
         cardContent
       ) : (
-        <Link href={href} className="block h-full">
+        <Link href={href} onClick={handleCardClick} className="block h-full">
           {cardContent}
         </Link>
       )}

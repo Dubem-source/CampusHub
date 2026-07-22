@@ -90,7 +90,7 @@ const steps = [
     text: "Message agents instantly with a polished pre-filled request for inspections.",
   },
 ];
- 
+
 const row1Testimonials = [
   {
     text: "I found a verified lodge in under 24 hours and the agent was responsive on WhatsApp. Moving in was smooth and affordable.",
@@ -123,7 +123,7 @@ const row1Testimonials = [
     dept: "Electrical Engineering",
   },
 ];
- 
+
 const row2Testimonials = [
   {
     text: "CampusHub made comparing room options easy. The photos were accurate and booking was direct.",
@@ -356,11 +356,10 @@ export default function Home() {
                                 setSelectedArea(item.value);
                                 setAreaDropdownOpen(false);
                               }}
-                              className={`w-full text-left px-3 py-2 rounded-xl text-xs font-medium transition cursor-pointer select-none ${
-                                selectedArea === item.value
-                                  ? 'bg-[#e0b445] text-navy font-bold shadow-md shadow-gold/15'
-                                  : 'text-white/80 hover:bg-white/5 hover:text-white'
-                              }`}
+                              className={`w-full text-left px-3 py-2 rounded-xl text-xs font-medium transition cursor-pointer select-none ${selectedArea === item.value
+                                ? 'bg-[#e0b445] text-navy font-bold shadow-md shadow-gold/15'
+                                : 'text-white/80 hover:bg-white/5 hover:text-white'
+                                }`}
                             >
                               {item.label}
                             </div>
@@ -541,13 +540,13 @@ export default function Home() {
           variants={fadeUp}
           className="mx-auto max-w-7xl lg:pb-16 md:pb-16 md:px-8 lg:px-10 md:pt-8 lg:pt-10"
         >
-          <div className="lg:rounded-[2rem] bg-[#0f1e2d] p-8 text-black md:p-10">
+          <div className="lg:rounded-[2rem] bg-[#0f1e2d] p-8 text-amber-400 md:p-10">
             <div className="grid gap-8 lg:grid-cols-[0.85fr_1.15fr]">
               <motion.div variants={fadeUp}>
                 <p className="text-sm text-white font-semibold uppercase tracking-[0.24em] text-gold">
                   How it works
                 </p>
-                <h2 className="mt-3 text-3xl font-semibold md:text-4xl">
+                <h2 className="mt-3 text-2xl text-white font-semibold md:text-4xl">
                   A simpler way to find a lodge
                 </h2>
                 <p className="mt-4 max-w-lg text-sm leading-7 text-white/70">
@@ -566,15 +565,15 @@ export default function Home() {
                     <motion.div
                       key={step.title}
                       variants={fadeUp}
-                      className="rounded-3xl border border-white/10 bg-white/6 p-5 backdrop-blur"
+                      className="rounded-3xl border border-white/10 bg-white/6 p-5 backdrop-blur transition-all duration-300 ease-out hover:-translate-y-2 hover:bg-white/10 hover:border-gold/30 hover:shadow-2xl hover:shadow-gold/5 group cursor-default"
                     >
-                      <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gold text-navy">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gold text-navy transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3 shadow-md shadow-gold/10">
                         <Icon className="h-5 w-5" />
                       </div>
-                      <div className="mt-5 text-xs font-semibold uppercase tracking-[0.2em] text-white/45">
+                      <div className="mt-5 text-xs font-semibold uppercase tracking-[0.2em] text-white/40">
                         Step {index + 1}
                       </div>
-                      <h3 className="mt-2 text-lg font-semibold">
+                      <h3 className="mt-2 text-lg font-bold text-white transition-colors duration-300 group-hover:text-gold">
                         {step.title}
                       </h3>
                       <p className="mt-2 text-sm leading-7 text-white/65">
@@ -589,7 +588,7 @@ export default function Home() {
         </motion.section>
       </main>
 
-            <motion.section
+      <motion.section
         initial="hidden"
         whileInView="show"
         viewport={{ once: true, amount: 0.15 }}
